@@ -7,6 +7,7 @@ package servion
 
 import (
 	"go.arpabet.com/glue"
+	"go.arpabet.com/servion/servionapi"
 	"net/http"
 )
 
@@ -27,8 +28,8 @@ func (t *httpServerScanner) Beans() []interface{} {
 		HttpServerFactory(t.beanName),
 		&struct {
 			// make them visible
-			Servers     []Server       `inject:"optional"`
-			HttpServers []*http.Server `inject:""`
+			Servers     []servionapi.Server `inject:"optional"`
+			HttpServers []*http.Server      `inject:""`
 		}{},
 	}
 	return append(beans, t.scan...)

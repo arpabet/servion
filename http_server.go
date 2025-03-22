@@ -8,6 +8,7 @@ package servion
 import (
 	"crypto/tls"
 	"github.com/pkg/errors"
+	"go.arpabet.com/servion/servionapi"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"net"
@@ -17,7 +18,7 @@ import (
 )
 
 type implHttpServer struct {
-	Log *zap.Logger `inject`
+	Log *zap.Logger `inject:""`
 
 	srv      *http.Server
 	listener net.Listener
@@ -27,7 +28,7 @@ type implHttpServer struct {
 	shutdownCh   chan struct{}
 }
 
-func NewHttpServer(srv *http.Server) Server {
+func NewHttpServer(srv *http.Server) servionapi.Server {
 	return &implHttpServer{srv: srv, shutdownCh: make(chan struct{})}
 }
 
@@ -54,7 +55,7 @@ func (t *implHttpServer) ListenAddress() net.Addr {
 	if t.listener != nil {
 		return t.listener.Addr()
 	} else {
-		return EmptyAddr
+		return servionapi.EmptyAddr
 	}
 }
 

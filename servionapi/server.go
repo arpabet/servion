@@ -3,20 +3,17 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-package servion
+package servionapi
 
 import (
 	"crypto/tls"
 	"go.arpabet.com/glue"
-	"go.uber.org/zap"
 	"net"
 	"net/http"
 	"reflect"
 )
 
-var (
-	ZapLogClass = reflect.TypeOf((*zap.Logger)(nil))
-)
+var ServerRole = "server"
 
 var (
 	TlsConfigClass  = reflect.TypeOf((*tls.Config)(nil))  // *tls.Config

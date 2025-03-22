@@ -7,6 +7,7 @@ package servion
 
 import (
 	"go.arpabet.com/glue"
+	"go.arpabet.com/servion/servionapi"
 	"go.uber.org/zap"
 	"reflect"
 )
@@ -25,7 +26,7 @@ func (t *implZapLogFactory) Object() (object interface{}, err error) {
 	return zap.NewDevelopment()
 }
 
-func (t *implZapLogFactory) ObjectType() reflect.Type { return ZapLogClass }
+func (t *implZapLogFactory) ObjectType() reflect.Type { return servionapi.ZapLogClass }
 
 func (t *implZapLogFactory) ObjectName() string {
 	return "zap_logger"
