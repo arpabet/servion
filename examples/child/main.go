@@ -8,9 +8,9 @@ import (
 
 func main() {
 
-	properties := &glue.PropertySource{Map: map[string]interface{}{
+	properties := glue.PropertyMap{
 		"http-server.bind-address": "0.0.0.0:8000",
-	}}
+	}
 
 	beans := []interface{}{
 		properties,
