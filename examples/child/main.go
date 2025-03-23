@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2025 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 package main
 
 import (
@@ -8,7 +13,7 @@ import (
 
 func main() {
 
-	properties := glue.PropertyMap{
+	properties := glue.MapPropertySource{
 		"http-server.bind-address": "0.0.0.0:8000",
 	}
 
