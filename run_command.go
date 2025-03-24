@@ -16,8 +16,8 @@ import (
 
 type implRunCommand struct {
 	Parent  cligo.CliGroup `cli:"group=cli"`
-	Profile string         `cli:"argument=profile,default=dev,help=execution profile"`
 	HomeDir string         `cli:"option=home,default=.,help=home directory of application"`
+	Bind    string         `cli:"option=bind,default=,help=bind listening address"`
 	beans   []interface{}
 }
 
@@ -37,7 +37,7 @@ This command accepts one argument that is profile, that helps to define how the 
 
 func (cmd *implRunCommand) Run(ctx glue.Context) (err error) {
 	
-	runtime := NewRuntime(cmd.Profile, cmd.HomeDir)
+	runtime := NewRuntime(cmd.HomeDir)
 	cmd.beans = append(cmd.beans, runtime)
 
 	var logger *zap.Logger

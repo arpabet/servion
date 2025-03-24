@@ -83,12 +83,12 @@ type Server interface {
 }
 
 /**
-Handler interface for routing the HTTP request to specific pattern.
+HTTP Handler interface for routing the HTTP request to specific pattern.
 */
 
-var HandlerClass = reflect.TypeOf((*Handler)(nil)).Elem()
+var HttpHandlerClass = reflect.TypeOf((*HttpHandler)(nil)).Elem()
 
-type Handler interface {
+type HttpHandler interface {
 	http.Handler
 
 	/**

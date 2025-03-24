@@ -1,6 +1,10 @@
 # servion
 Container based server framework
 
+* supports simple command line interface
+* supports multiple servers
+* supports isolation of application child context between servers
+
 Example of basic HTTP server based on this framework.
 ```
 package main
@@ -13,9 +17,9 @@ import (
 
 func main() {
 
-	properties := &glue.PropertySource{Map: map[string]interface{}{
+	properties := glue.MapPropertySource{
 		"http-server.bind-address": "0.0.0.0:8000",
-	}}
+	}
 
 	beans := []interface{}{
 		properties,

@@ -23,11 +23,6 @@ type Runtime interface {
 	Component
 
 	/*
-		Gets application runtime profile, could be: dev, qa, prod and etc.
-	*/
-	Profile() string
-
-	/*
 		Gets application binary name, used on startup, could be different with application name
 	*/
 	Executable() string

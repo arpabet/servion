@@ -19,7 +19,6 @@ import (
 type implRuntime struct {
 	CliApplication cligo.CliApplication `inject:""`
 
-	profile    string
 	runtimeErr atomic.Error
 
 	executable    string
@@ -32,9 +31,8 @@ type implRuntime struct {
 	shutdownOnce sync.Once
 }
 
-func NewRuntime(profile string, homeDir string) servionapi.Runtime {
+func NewRuntime(homeDir string) servionapi.Runtime {
 	t := &implRuntime{
-		profile:    profile,
 		homeDir:    homeDir,
 		shutdownCh: make(chan struct{}),
 	}
@@ -53,7 +51,6 @@ func (t *implRuntime) GetStats(cb func(name, value string) bool) error {
 
 	cb("executable", t.executable)
 	cb("home", t.homeDir)
-	cb("profile", t.profile)
 	return nil
 }
 
@@ -81,10 +78,6 @@ func (t *implRuntime) PostConstruct() (err error) {
 		}
 	}
 	return nil
-}
-
-func (t *implRuntime) Profile() string {
-	return t.profile
 }
 
 func (t *implRuntime) Executable() string {

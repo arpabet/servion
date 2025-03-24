@@ -19,11 +19,11 @@ import (
 )
 
 type implHttpServerFactory struct {
-	Log        *zap.Logger            `inject:""`
-	Properties glue.Properties        `inject:""`
-	Handlers   []servionapi.Handler   `inject:"optional,level=1"`
-	Resources  []*glue.ResourceSource `inject:"optional"`
-	TlsConfig  *tls.Config            `inject:"optional"`
+	Log        *zap.Logger              `inject:""`
+	Properties glue.Properties          `inject:""`
+	Handlers   []servionapi.HttpHandler `inject:"optional,level=1"`
+	Resources  []*glue.ResourceSource   `inject:"optional"`
+	TlsConfig  *tls.Config              `inject:"optional"`
 
 	beanName string
 }
@@ -52,7 +52,7 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 
 	visitedPatterns := make(map[string]bool)
 
-	var pageList []string
+	var handlerList []string
 	if options["handlers"] {
 		for _, handler := range t.Handlers {
 			pattern := handler.Pattern()
@@ -60,7 +60,7 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 				t.Log.Warn("PatternExist", zap.String("pattern", pattern), zap.Any("handler", handler))
 			} else {
 				visitedPatterns[pattern] = true
-				pageList = append(pageList, pattern)
+				handlerList = append(handlerList, pattern)
 				mux.Handle(pattern, handler)
 			}
 		}
@@ -85,7 +85,7 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 	t.Log.Info("HTTPServerFactory",
 		zap.String("listenAddr", listenAddr),
 		zap.String("bean", t.beanName),
-		zap.Strings("pages", pageList),
+		zap.Strings("handlers", handlerList),
 		zap.Strings("assets", assetList),
 		zap.Any("options", options),
 		zap.Bool("tls", t.TlsConfig != nil))
