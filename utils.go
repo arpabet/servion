@@ -9,7 +9,6 @@ import (
 	"context"
 	"github.com/pkg/errors"
 	"go.arpabet.com/glue"
-	"go.arpabet.com/servion/servionapi"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -68,7 +67,7 @@ func (t gzipWriter) WriteHeader(statusCode int) {
 	t.w.WriteHeader(statusCode)
 }
 
-func doWithServers(core glue.Context, cb func([]servionapi.Server) error) (err error) {
+func doWithServers(core glue.Context, cb func([]Server) error) (err error) {
 
 	var contextList []glue.Context
 
@@ -107,18 +106,18 @@ func doWithServers(core glue.Context, cb func([]servionapi.Server) error) (err e
 		}
 	}
 
-	var serverList []servionapi.Server
+	var serverList []Server
 	for _, ctx := range contextList {
 
-		for i, bean := range ctx.Bean(servionapi.ServerClass, glue.DefaultLevel) {
-			if srv, ok := bean.Object().(servionapi.Server); ok {
+		for i, bean := range ctx.Bean(ServerClass, glue.DefaultLevel) {
+			if srv, ok := bean.Object().(Server); ok {
 				serverList = append(serverList, srv)
 			} else {
 				return errors.Errorf("invalid object found for servionapi.Server on position %d in child context: %v", i, ctx)
 			}
 		}
 
-		for i, bean := range ctx.Bean(servionapi.HttpServerClass, glue.DefaultLevel) {
+		for i, bean := range ctx.Bean(HttpServerClass, glue.DefaultLevel) {
 			if srv, ok := bean.Object().(*http.Server); ok {
 				s := NewHttpServer(srv)
 				if err := ctx.Inject(s); err != nil {
@@ -135,9 +134,9 @@ func doWithServers(core glue.Context, cb func([]servionapi.Server) error) (err e
 	return cb(serverList)
 }
 
-func runServers(runtime servionapi.Runtime, core glue.Context, log *zap.Logger) error {
+func runServers(runtime Runtime, core glue.Context, log *zap.Logger) error {
 
-	return doWithServers(core, func(servers []servionapi.Server) (err error) {
+	return doWithServers(core, func(servers []Server) (err error) {
 
 		defer PanicToError(&err)
 		defer log.Sync()
@@ -149,7 +148,7 @@ func runServers(runtime servionapi.Runtime, core glue.Context, log *zap.Logger) 
 		c, cancel := context.WithCancel(runtime)
 		defer cancel()
 
-		var boundServers []servionapi.Server
+		var boundServers []Server
 		for _, server := range servers {
 			if err := server.Bind(); err != nil {
 				log.Error("Bind", zap.Error(err))
@@ -196,7 +195,7 @@ func runServers(runtime servionapi.Runtime, core glue.Context, log *zap.Logger) 
 			log.Info("StopSignal", zap.String("signal", signal.String()))
 
 			if signal == syscall.SIGHUP {
-				list := core.Bean(servionapi.LumberjackClass, 1)
+				list := core.Bean(LumberjackClass, 1)
 				if len(list) > 0 {
 					for _, bean := range list {
 						if logger, ok := bean.Object().(*lumberjack.Logger); ok {

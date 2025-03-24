@@ -3,17 +3,62 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-package servionapi
+package servion
 
 import (
+	"context"
 	"crypto/tls"
 	"go.arpabet.com/glue"
+	"go.uber.org/zap"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"net"
 	"net/http"
 	"reflect"
 )
 
-var ServerRole = "server"
+var (
+	ZapLogClass     = reflect.TypeOf((*zap.Logger)(nil))
+	LumberjackClass = reflect.TypeOf((*lumberjack.Logger)(nil))
+)
+
+var RuntimeClass = reflect.TypeOf((*Runtime)(nil)).Elem()
+
+/*
+Runtime is the base entry point class for golang application.
+*/
+type Runtime interface {
+	context.Context
+	glue.InitializingBean
+	glue.NamedBean
+	Component
+
+	/*
+		Gets application binary name, used on startup, could be different with application name
+	*/
+	Executable() string
+
+	/*
+		Gets home directory of the application, could be overriden by flags
+	*/
+	HomeDir() string
+
+	/*
+		Indicator if application is active and not in shutting down mode
+	*/
+	Active() bool
+
+	/*
+		Sets the flag that application is in shutting down mode then notify all go routines by ShutdownChannel then notify signal channel with interrupt signal
+
+		Additionally sets the flag that application is going to be restarted after shutdown
+	*/
+	Shutdown(restart bool)
+
+	/*
+		Indicator if application needs to be restarted by autoupdate or remote command after shutdown
+	*/
+	Restarting() bool
+}
 
 var (
 	TlsConfigClass  = reflect.TypeOf((*tls.Config)(nil))  // *tls.Config
@@ -96,4 +141,18 @@ type HttpHandler interface {
 	*/
 
 	Pattern() string
+}
+
+// ComponentClass Generic component class that has a name and ability to GetStats
+var ComponentClass = reflect.TypeOf((*Component)(nil)).Elem()
+
+type Component interface {
+	glue.NamedBean
+
+	/*
+		Gets status with name=value key pair.
+		Server responds status request with stats ordered by key.
+	*/
+
+	GetStats(cb func(name, value string) bool) error
 }

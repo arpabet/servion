@@ -8,7 +8,6 @@ package servion
 import (
 	"github.com/pkg/errors"
 	"go.arpabet.com/cligo"
-	"go.arpabet.com/servion/servionapi"
 	"go.uber.org/atomic"
 	"os"
 	"path/filepath"
@@ -31,7 +30,7 @@ type implRuntime struct {
 	shutdownOnce sync.Once
 }
 
-func NewRuntime(homeDir string) servionapi.Runtime {
+func NewRuntime(homeDir string) Runtime {
 	t := &implRuntime{
 		homeDir:    homeDir,
 		shutdownCh: make(chan struct{}),

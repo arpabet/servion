@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"go.arpabet.com/glue"
-	"go.arpabet.com/servion/servionapi"
 	"go.uber.org/zap"
 	"net/http"
 	"reflect"
@@ -19,11 +18,11 @@ import (
 )
 
 type implHttpServerFactory struct {
-	Log        *zap.Logger              `inject:""`
-	Properties glue.Properties          `inject:""`
-	Handlers   []servionapi.HttpHandler `inject:"optional,level=1"`
-	Resources  []*glue.ResourceSource   `inject:"optional"`
-	TlsConfig  *tls.Config              `inject:"optional"`
+	Log        *zap.Logger            `inject:""`
+	Properties glue.Properties        `inject:""`
+	Handlers   []HttpHandler          `inject:"optional,level=1"`
+	Resources  []*glue.ResourceSource `inject:"optional"`
+	TlsConfig  *tls.Config            `inject:"optional"`
 
 	beanName string
 }
@@ -112,7 +111,7 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 
 }
 
-func (t *implHttpServerFactory) ObjectType() reflect.Type { return servionapi.HttpServerClass }
+func (t *implHttpServerFactory) ObjectType() reflect.Type { return HttpServerClass }
 
 func (t *implHttpServerFactory) ObjectName() string {
 

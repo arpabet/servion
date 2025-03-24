@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	"go.arpabet.com/cligo"
 	"go.arpabet.com/glue"
-	"go.arpabet.com/servion/servionapi"
 	"go.uber.org/zap"
 )
 
@@ -36,12 +35,12 @@ This command accepts one argument that is profile, that helps to define how the 
 }
 
 func (cmd *implRunCommand) Run(ctx glue.Context) (err error) {
-	
+
 	runtime := NewRuntime(cmd.HomeDir)
 	cmd.beans = append(cmd.beans, runtime)
 
 	var logger *zap.Logger
-	zapBeans := ctx.Bean(servionapi.ZapLogClass, glue.DefaultLevel)
+	zapBeans := ctx.Bean(ZapLogClass, glue.DefaultLevel)
 	if len(zapBeans) == 0 {
 		logger, err = zap.NewDevelopment()
 		if err != nil {
