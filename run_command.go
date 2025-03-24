@@ -59,14 +59,15 @@ func (cmd *implRunCommand) Run(ctx glue.Context) (err error) {
 		}
 
 		err = runServers(runtime, child, logger)
-		contextCloseErr := child.Close()
-
 		if err != nil {
 			logger.Error("RunServers", zap.Bool("restarting", runtime.Restarting()), zap.Error(err))
+		} else {
+			logger.Info("RunServers", zap.Bool("restarting", runtime.Restarting()))
 		}
 
-		if contextCloseErr != nil {
-			logger.Error("ChildContextClose", zap.Error(contextCloseErr))
+		err = child.Close()
+		if err != nil {
+			logger.Error("ChildContextClose", zap.Error(err))
 		}
 
 		if !runtime.Restarting() {
