@@ -48,7 +48,7 @@ type Runtime interface {
 	/*
 		Sets the flag that application is in shutting down mode then notify all go routines by ShutdownChannel then notify signal channel with interrupt signal
 
-		Additionally sets the flag that application is going to be restarted after shutdown
+		Additionally, sets the flag that application is going to be restarted after shutdown
 	*/
 	Shutdown(restart bool)
 

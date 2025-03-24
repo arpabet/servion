@@ -36,8 +36,14 @@ This command accepts one argument that is profile, that helps to define how the 
 
 func (cmd *implRunCommand) Run(ctx glue.Context) (err error) {
 
+runItAgain:
+
+	beans := make([]interface{}, len(cmd.beans))
+	copy(beans, cmd.beans)
+
+	// always new runtime
 	runtime := NewRuntime(cmd.HomeDir)
-	cmd.beans = append(cmd.beans, runtime)
+	beans = append(beans, runtime)
 
 	var logger *zap.Logger
 	zapBeans := ctx.Bean(ZapLogClass, glue.DefaultLevel)
@@ -46,34 +52,30 @@ func (cmd *implRunCommand) Run(ctx glue.Context) (err error) {
 		if err != nil {
 			return errors.Errorf("failed to initialize zap logger: %v", err)
 		}
-		cmd.beans = append(cmd.beans, logger)
+		beans = append(beans, logger)
 	} else {
 		logger = zapBeans[0].Object().(*zap.Logger)
 	}
 
-	for {
+	child, err := ctx.Extend(beans...)
+	if err != nil {
+		return fmt.Errorf("fail to initialize '%s' command scope context, %v", cmd.Command(), err)
+	}
 
-		child, err := ctx.Extend(cmd.beans...)
-		if err != nil {
-			return fmt.Errorf("fail to initialize '%s' command scope context, %v", cmd.Command(), err)
-		}
+	err = runServers(runtime, child, logger)
+	if err != nil {
+		logger.Error("RunServers", zap.Bool("restarting", runtime.Restarting()), zap.Error(err))
+	} else {
+		logger.Info("RunServers", zap.Bool("restarting", runtime.Restarting()))
+	}
 
-		err = runServers(runtime, child, logger)
-		if err != nil {
-			logger.Error("RunServers", zap.Bool("restarting", runtime.Restarting()), zap.Error(err))
-		} else {
-			logger.Info("RunServers", zap.Bool("restarting", runtime.Restarting()))
-		}
+	err = child.Close()
+	if err != nil {
+		logger.Error("ChildContextClose", zap.Error(err))
+	}
 
-		err = child.Close()
-		if err != nil {
-			logger.Error("ChildContextClose", zap.Error(err))
-		}
-
-		if !runtime.Restarting() {
-			break
-		}
-
+	if runtime.Restarting() {
+		goto runItAgain
 	}
 
 	return nil
