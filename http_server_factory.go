@@ -78,6 +78,15 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 		}
 	}
 
+	var tlsConfig *tls.Config
+	if options["tls"] {
+		if t.TlsConfig != nil {
+			tlsConfig = t.TlsConfig.Clone()
+		} else {
+			t.Log.Warn("TLSConfigNotFound", zap.String("bean", t.beanName))
+		}
+	}
+
 	readTimeout := t.Properties.GetDuration(fmt.Sprintf("%s.%s", t.beanName, "read-timeout"), 30*time.Second)
 	writeTimeout := t.Properties.GetDuration(fmt.Sprintf("%s.%s", t.beanName, "write-timeout"), 30*time.Second)
 	idleTimeout := t.Properties.GetDuration(fmt.Sprintf("%s.%s", t.beanName, "idle-timeout"), time.Minute)
@@ -88,7 +97,7 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 		zap.Strings("handlers", handlerList),
 		zap.Strings("assets", assetList),
 		zap.Any("options", options),
-		zap.Bool("tls", t.TlsConfig != nil))
+		zap.Bool("tls", tlsConfig != nil))
 
 	srv := &http.Server{
 		Addr:         listenAddr,
@@ -96,10 +105,7 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		IdleTimeout:  idleTimeout,
-	}
-
-	if t.TlsConfig != nil {
-		srv.TLSConfig = t.TlsConfig.Clone()
+		TLSConfig:    tlsConfig,
 	}
 
 	return srv, nil
