@@ -10,15 +10,13 @@ import (
 	"crypto/tls"
 	"go.arpabet.com/glue"
 	"go.uber.org/zap"
-	"gopkg.in/natefinch/lumberjack.v2"
 	"net"
 	"net/http"
 	"reflect"
 )
 
 var (
-	ZapLogClass     = reflect.TypeOf((*zap.Logger)(nil))
-	LumberjackClass = reflect.TypeOf((*lumberjack.Logger)(nil))
+	ZapLogClass = reflect.TypeOf((*zap.Logger)(nil))
 )
 
 var RuntimeClass = reflect.TypeOf((*Runtime)(nil)).Elem()

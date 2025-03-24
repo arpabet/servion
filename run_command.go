@@ -51,11 +51,25 @@ func (cmd *implRunCommand) Run(ctx glue.Context) (err error) {
 		logger = zapBeans[0].Object().(*zap.Logger)
 	}
 
-	child, err := ctx.Extend(cmd.beans...)
-	if err != nil {
-		return fmt.Errorf("fail to initialize '%s' command scope context, %v", cmd.Command(), err)
-	}
-	defer child.Close()
+	for !runtime.Restarting() {
 
-	return runServers(runtime, child, logger)
+		child, err := ctx.Extend(cmd.beans...)
+		if err != nil {
+			return fmt.Errorf("fail to initialize '%s' command scope context, %v", cmd.Command(), err)
+		}
+
+		err = runServers(runtime, child, logger)
+		contextCloseErr := child.Close()
+
+		if err != nil {
+			logger.Error("RunServers", zap.Bool("restarting", runtime.Restarting()), zap.Error(err))
+		}
+
+		if contextCloseErr != nil {
+			logger.Error("ChildContextClose", zap.Error(contextCloseErr))
+		}
+
+	}
+
+	return nil
 }

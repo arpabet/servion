@@ -11,7 +11,6 @@ import (
 	"go.arpabet.com/glue"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-	"gopkg.in/natefinch/lumberjack.v2"
 	"net/http"
 	"os"
 	"os/signal"
@@ -185,7 +184,6 @@ func runServers(runtime Runtime, core glue.Context, log *zap.Logger) error {
 
 			var signal os.Signal
 
-		waitAgain:
 			select {
 			case signal = <-signalCh:
 			case <-runtime.Done():
@@ -195,16 +193,7 @@ func runServers(runtime Runtime, core glue.Context, log *zap.Logger) error {
 			log.Info("StopSignal", zap.String("signal", signal.String()))
 
 			if signal == syscall.SIGHUP {
-				list := core.Bean(LumberjackClass, 1)
-				if len(list) > 0 {
-					for _, bean := range list {
-						if logger, ok := bean.Object().(*lumberjack.Logger); ok {
-							logger.Rotate()
-						}
-					}
-					goto waitAgain
-				}
-				// no lumberjack found, restart application
+				// restart application
 				runtime.Shutdown(true)
 			} else {
 				runtime.Shutdown(false)
