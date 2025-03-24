@@ -23,7 +23,7 @@ func HttpServerScanner(beanName string, scan ...interface{}) glue.Scanner {
 	}
 }
 
-func (t *httpServerScanner) Beans() []interface{} {
+func (t *httpServerScanner) ScannerBeans() []interface{} {
 	beans := []interface{}{
 		HttpServerFactory(t.beanName),
 		&struct {
