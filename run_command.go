@@ -51,7 +51,7 @@ func (cmd *implRunCommand) Run(ctx glue.Context) (err error) {
 		logger = zapBeans[0].Object().(*zap.Logger)
 	}
 
-	for !runtime.Restarting() {
+	for {
 
 		child, err := ctx.Extend(cmd.beans...)
 		if err != nil {
@@ -67,6 +67,10 @@ func (cmd *implRunCommand) Run(ctx glue.Context) (err error) {
 
 		if contextCloseErr != nil {
 			logger.Error("ChildContextClose", zap.Error(contextCloseErr))
+		}
+
+		if !runtime.Restarting() {
+			break
 		}
 
 	}
