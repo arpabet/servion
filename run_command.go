@@ -63,9 +63,9 @@ runItAgain:
 
 	err = runServers(runtime, child, logger)
 	if err != nil {
-		logger.Error("RunServers", zap.Bool("restarting", runtime.Restarting()), zap.Error(err))
+		logger.Error("RunServersDone", zap.Bool("restarting", runtime.Restarting()), zap.Error(err))
 	} else {
-		logger.Info("RunServers", zap.Bool("restarting", runtime.Restarting()))
+		logger.Info("RunServersDone", zap.Bool("restarting", runtime.Restarting()))
 	}
 
 	err = child.Close()
