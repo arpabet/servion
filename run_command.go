@@ -6,7 +6,6 @@
 package servion
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	"go.arpabet.com/cligo"
 	"go.arpabet.com/glue"
@@ -59,7 +58,7 @@ runItAgain:
 
 	child, err := ctx.Extend(beans...)
 	if err != nil {
-		return fmt.Errorf("fail to initialize '%s' command scope context, %v", cmd.Command(), err)
+		return errors.Errorf("failed to initialize '%s' command scope context, %v", cmd.Command(), err)
 	}
 
 	err = runServers(runtime, child, logger)
