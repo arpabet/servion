@@ -8,6 +8,7 @@ package servion
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"go.arpabet.com/glue"
 	"go.uber.org/zap"
@@ -47,7 +48,7 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 
 	options := ParseOptions(t.Properties.GetString(fmt.Sprintf("%s.%s", t.beanName, "options"), ""))
 
-	mux := http.NewServeMux()
+	serveMux := mux.NewRouter()
 
 	visitedPatterns := make(map[string]bool)
 
@@ -60,7 +61,7 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 			} else {
 				visitedPatterns[pattern] = true
 				handlerList = append(handlerList, pattern)
-				mux.Handle(pattern, handler)
+				serveMux.Handle(pattern, handler)
 			}
 		}
 	}
@@ -73,7 +74,7 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 			}
 			visitedPatterns[pattern] = true
 			assetList = append(assetList, pattern)
-			mux.Handle(pattern, handler)
+			serveMux.Handle(pattern, handler)
 		}
 	}
 
@@ -100,7 +101,7 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 
 	srv := &http.Server{
 		Addr:         listenAddr,
-		Handler:      mux,
+		Handler:      serveMux,
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		IdleTimeout:  idleTimeout,

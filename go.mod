@@ -7,6 +7,7 @@ toolchain go1.24.1
 //replace go.arpabet.com/cligo => ../cligo
 
 require (
+	github.com/gorilla/mux v1.8.1
 	github.com/pkg/errors v0.9.1
 	go.arpabet.com/cligo v0.1.6
 	go.arpabet.com/glue v1.2.4
