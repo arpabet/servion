@@ -8,11 +8,12 @@ package servion
 import (
 	"context"
 	"crypto/tls"
-	"go.arpabet.com/glue"
-	"go.uber.org/zap"
 	"net"
 	"net/http"
 	"reflect"
+
+	"go.arpabet.com/glue"
+	"go.uber.org/zap"
 )
 
 var (
@@ -135,10 +136,27 @@ type HttpHandler interface {
 	http.Handler
 
 	/**
-	Returns the url pattern used to serve the page.
+	Pattern Returns the url pattern used to serve the page.
 	*/
 
 	Pattern() string
+}
+
+var HttpMiddlewareClass = reflect.TypeOf((*HttpMiddleware)(nil)).Elem()
+
+type HttpMiddleware interface {
+	glue.OrderedBean
+
+	/**
+	Middleware Returns the new wrapped handler.
+	*/
+
+	Middleware(next http.Handler) http.Handler
+
+	/*
+		Match the prefix of pattern
+	*/
+	Match(prefix string) bool
 }
 
 // ComponentClass Generic component class that has a name and ability to GetStats

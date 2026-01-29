@@ -14,22 +14,33 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 )
 
 type implHttpServerFactory struct {
-	Log        *zap.Logger            `inject:""`
-	Properties glue.Properties        `inject:""`
-	Handlers   []HttpHandler          `inject:"optional,level=1"`
-	Resources  []*glue.ResourceSource `inject:"optional"`
-	TlsConfig  *tls.Config            `inject:"optional"`
+	Log         *zap.Logger            `inject:""`
+	Properties  glue.Properties        `inject:""`
+	Handlers    []HttpHandler          `inject:"optional,level=1"`
+	Middlewares []HttpMiddleware       `inject:"optional,level=1"`
+	Resources   []*glue.ResourceSource `inject:"optional"`
+	TlsConfig   *tls.Config            `inject:"optional"`
 
 	beanName string
 }
 
 func HttpServerFactory(beanName string) glue.FactoryBean {
 	return &implHttpServerFactory{beanName: beanName}
+}
+
+func (t *implHttpServerFactory) PostConstruct() error {
+	if len(t.Middlewares) > 1 {
+		sort.Slice(t.Middlewares, func(i, j int) bool {
+			return t.Middlewares[i].BeanOrder() < t.Middlewares[j].BeanOrder()
+		})
+	}
+	return nil
 }
 
 func (t *implHttpServerFactory) isEnabled(name string) bool {
@@ -60,8 +71,17 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 				t.Log.Warn("PatternExist", zap.String("pattern", pattern), zap.Any("handler", handler))
 			} else {
 				visitedPatterns[pattern] = true
+
+				var h http.Handler
+				h = handler
+				for _, middleware := range t.Middlewares {
+					if middleware.Match(pattern) {
+						h = middleware.Middleware(h)
+					}
+				}
+
 				handlerList = append(handlerList, pattern)
-				serveMux.Handle(pattern, handler)
+				serveMux.Handle(pattern, h)
 			}
 		}
 	}
