@@ -7,16 +7,17 @@ package servion
 
 import (
 	"context"
-	"github.com/pkg/errors"
-	"go.arpabet.com/glue"
-	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 	"net/http"
 	"os"
 	"os/signal"
 	"runtime/debug"
 	"strings"
 	"syscall"
+
+	"github.com/pkg/errors"
+	"go.arpabet.com/glue"
+	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 func PanicToError(err *error) {
