@@ -8,15 +8,16 @@ package servion
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
-	"go.arpabet.com/glue"
-	"go.uber.org/zap"
 	"net/http"
 	"reflect"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
+	"go.arpabet.com/glue"
+	"go.uber.org/zap"
 )
 
 type implHttpServerFactory struct {
@@ -72,13 +73,21 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 			} else {
 				visitedPatterns[pattern] = true
 
-				var h http.Handler
-				h = handler
-				for _, middleware := range t.Middlewares {
-					if middleware.Match(pattern) {
-						h = middleware.Middleware(h)
+				// Wrap handler with middlewares in reverse order so that
+				// the first middleware in the list runs first on the request.
+				var h http.Handler = handler
+
+				if len(t.Middlewares) > 0 { // nil-safe, also works if empty
+					for i := len(t.Middlewares) - 1; i >= 0; i-- {
+						middleware := t.Middlewares[i]
+						if middleware != nil && middleware.Match(pattern) { // extra safety check
+							h = middleware.Middleware(h)
+						}
 					}
 				}
+
+				handlerList = append(handlerList, pattern)
+				serveMux.Handle(pattern, h)
 
 				handlerList = append(handlerList, pattern)
 				serveMux.Handle(pattern, h)
