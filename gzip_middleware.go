@@ -137,24 +137,23 @@ func (w *adaptiveGzipWriter) WriteHeader(code int) {
 func (w *adaptiveGzipWriter) Write(p []byte) (int, error) {
 	w.size += len(p)
 
-	// Not started yet → buffer
 	if !w.started {
 		w.buf.Write(p)
-
-		if w.buf.Len() < w.minSize {
-			return len(p), nil
+		if w.buf.Len() >= w.minSize {
+			// Start gzip and flush buffer
+			if err := w.startGzip(); err != nil {
+				return 0, err
+			}
 		}
-
-		// Threshold exceeded → start gzip
-		w.startGzip()
+		return len(p), nil
 	}
 
+	// Gzip already started → write directly
 	return w.gw.Write(p)
 }
 
-func (w *adaptiveGzipWriter) startGzip() {
+func (w *adaptiveGzipWriter) startGzip() error {
 	w.started = true
-
 	h := w.Header()
 	h.Set(hContentEncoding, encGzip)
 	h.Add(hVary, hAcceptEncoding)
@@ -163,19 +162,35 @@ func (w *adaptiveGzipWriter) startGzip() {
 	if w.status == 0 {
 		w.status = http.StatusOK
 	}
-
 	w.ResponseWriter.WriteHeader(w.status)
 
-	gw, _ := gzip.NewWriterLevel(w.ResponseWriter, w.level)
+	gw, err := gzip.NewWriterLevel(w.ResponseWriter, w.level)
+	if err != nil {
+		return err
+	}
 	w.gw = gw
 
-	io.Copy(w.gw, &w.buf)
+	// flush buffer exactly once
+	_, err = io.Copy(w.gw, &w.buf)
 	w.buf.Reset()
+	return err
 }
 
 func (w *adaptiveGzipWriter) Close() error {
-	if w.started {
+	if w.started && w.gw != nil {
 		return w.gw.Close()
 	}
+
+	// Flush uncompressed buffer if gzip never started
+	if w.buf.Len() > 0 {
+		if w.status == 0 {
+			w.status = http.StatusOK
+		}
+		w.ResponseWriter.WriteHeader(w.status)
+		_, err := w.ResponseWriter.Write(w.buf.Bytes())
+		w.buf.Reset()
+		return err
+	}
+
 	return nil
 }
