@@ -10,14 +10,14 @@ import (
 )
 
 type implGzipMiddleware struct {
-	Order        int      `value:"gzip.order,default=100"`
+	beanOrder    int
 	Level        int      `value:"gzip.level,default=1"`                  // gzip compression level
 	Threshold    int      `value:"gzip.threshold,default=1024"`           // bytes, default 1024
 	SkipPrefixes []string `value:"gzip.skip,default=/images;/videos;/ws"` // URL prefixes NOT to gzip
 }
 
-func GzipMiddleware() HttpMiddleware {
-	return &implGzipMiddleware{Level: gzip.BestSpeed}
+func GzipMiddleware(beanOrder int) HttpMiddleware {
+	return &implGzipMiddleware{beanOrder: beanOrder}
 }
 
 func (t *implGzipMiddleware) Middleware(next http.Handler) http.Handler {
@@ -70,7 +70,7 @@ func (t *implGzipMiddleware) Match(pattern string) bool {
 }
 
 func (t *implGzipMiddleware) BeanOrder() int {
-	return t.Order
+	return t.beanOrder
 }
 
 const (

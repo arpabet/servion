@@ -8,6 +8,7 @@ package servion
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"net"
 	"net/http"
 	"reflect"
@@ -157,6 +158,59 @@ type HttpMiddleware interface {
 		Match the prefix of pattern
 	*/
 	Match(prefix string) bool
+}
+
+type AuthInfo struct {
+	// HashedToken hash of bearer token (optional, but often useful for tracing)
+	HashedToken string
+
+	// Subject is a stable identity (user id, service id, email, etc.)
+	Subject string
+
+	// Authorization data
+	Scopes []string
+	Roles  []string
+
+	// Optional metadata
+	Issuer string
+
+	// Attributes
+	Attributes map[string]string
+}
+
+type authContextKeyType struct{}
+
+var authContextKey = authContextKeyType{}
+
+/*
+
+func ExampleHandler(w http.ResponseWriter, r *http.Request) {
+	auth, ok := servion.AuthFromContext(r.Context())
+	if !ok {
+		http.Error(w, "auth context missing", 500)
+		return
+	}
+
+	fmt.Println("subject:", auth.Subject)
+	fmt.Println("scopes:", auth.Scopes)
+}
+
+*/
+
+func AuthFromContext(ctx context.Context) (AuthInfo, bool) {
+	info, ok := ctx.Value(authContextKey).(AuthInfo)
+	return info, ok
+}
+
+var AuthenticatorClass = reflect.TypeOf((*Authenticator)(nil)).Elem()
+
+var ErrUnauthorized = errors.New("invalid token")
+var ErrServiceUnavailable = errors.New("service unavailable")
+
+type Authenticator interface {
+	// Authenticate validates token and returns auth info.
+	// ErrUnauthorized means authentication failed, all other errors are 500 errors.
+	Authenticate(token string) (AuthInfo, error)
 }
 
 // ComponentClass Generic component class that has a name and ability to GetStats
