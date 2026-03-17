@@ -7,6 +7,8 @@ package servion
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,7 +16,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pkg/errors"
 	"go.arpabet.com/glue"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -22,7 +23,7 @@ import (
 
 func PanicToError(err *error) {
 	if r := recover(); r != nil {
-		*err = errors.Errorf("%v, %s", r, debug.Stack())
+		*err = fmt.Errorf("%v, %s", r, debug.Stack())
 	}
 }
 
@@ -75,7 +76,7 @@ func doWithServers(core glue.Container, cb func([]Server) error) (err error) {
 
 		var listErr []error
 		if r := recover(); r != nil {
-			listErr = append(listErr, errors.Errorf("recovered on error: %v", r))
+			listErr = append(listErr, fmt.Errorf("recovered on error: %v", r))
 		}
 
 		for _, ctx := range childList {
@@ -87,7 +88,7 @@ func doWithServers(core glue.Container, cb func([]Server) error) (err error) {
 		}
 
 		if len(listErr) > 0 {
-			err = errors.Errorf("%+v", listErr)
+			err = fmt.Errorf("%v", listErr)
 		}
 
 	}()
@@ -99,7 +100,7 @@ func doWithServers(core glue.Container, cb func([]Server) error) (err error) {
 		for _, child := range core.Children() {
 			// Initialize child context, by default they are not initialized
 			if ctx, err := child.Object(); err != nil {
-				return errors.Errorf("server creation context '%v' failed by %v", child, err)
+				return fmt.Errorf("server creation context '%v' failed: %w", child, err)
 			} else {
 				childList = append(childList, ctx)
 			}
@@ -113,7 +114,7 @@ func doWithServers(core glue.Container, cb func([]Server) error) (err error) {
 			if srv, ok := bean.Object().(Server); ok {
 				serverList = append(serverList, srv)
 			} else {
-				return errors.Errorf("invalid object found for servionapi.Server on position %d in child context: %v", i, ctx)
+				return fmt.Errorf("invalid object found for servionapi.Server on position %d in child context: %v", i, ctx)
 			}
 		}
 
@@ -121,11 +122,11 @@ func doWithServers(core glue.Container, cb func([]Server) error) (err error) {
 			if srv, ok := bean.Object().(*http.Server); ok {
 				s := NewHttpServer(srv)
 				if err := ctx.Inject(s); err != nil {
-					return errors.Errorf("injection error for server '%s' of *http.Server on position %d in child context %v, %v", srv.Addr, i, ctx, err)
+					return fmt.Errorf("injection error for server '%s' of *http.Server on position %d in child context %v: %w", srv.Addr, i, ctx, err)
 				}
 				serverList = append(serverList, s)
 			} else {
-				return errors.Errorf("invalid object found for *http.Server on position %d in child context %v", i, ctx)
+				return fmt.Errorf("invalid object found for *http.Server on position %d in child context %v", i, ctx)
 			}
 		}
 

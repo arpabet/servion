@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 	"go.arpabet.com/glue"
 	"go.uber.org/zap"
 )
@@ -55,7 +54,7 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 	listenAddr := t.Properties.GetString(fmt.Sprintf("%s.%s", t.beanName, "bind-address"), "")
 
 	if listenAddr == "" {
-		return nil, errors.Errorf("property '%s.bind-address' not found in server context", t.beanName)
+		return nil, fmt.Errorf("property '%s.bind-address' not found in server context", t.beanName)
 	}
 
 	options := ParseOptions(t.Properties.GetString(fmt.Sprintf("%s.%s", t.beanName, "options"), ""))

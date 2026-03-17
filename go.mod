@@ -7,7 +7,6 @@ go 1.23.0
 require (
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
-	github.com/pkg/errors v0.9.1
 	go.arpabet.com/cligo v0.3.0
 	go.arpabet.com/glue v1.5.0
 	go.uber.org/atomic v1.11.0

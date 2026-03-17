@@ -6,13 +6,15 @@
 package servion
 
 import (
-	"github.com/pkg/errors"
-	"go.arpabet.com/cligo"
-	"go.uber.org/atomic"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"go.arpabet.com/cligo"
+	"go.uber.org/atomic"
 )
 
 type implRuntime struct {
@@ -60,7 +62,7 @@ func (t *implRuntime) PostConstruct() (err error) {
 
 	absHomeDir, err := filepath.Abs(t.homeDir)
 	if err != nil {
-		return errors.Errorf("failed to get abs home directory: %s, %v", t.homeDir, err)
+		return fmt.Errorf("failed to get abs home directory: %s: %w", t.homeDir, err)
 	}
 	t.homeDir = absHomeDir
 

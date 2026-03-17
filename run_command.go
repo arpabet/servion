@@ -7,8 +7,8 @@ package servion
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"go.arpabet.com/cligo"
 	"go.arpabet.com/glue"
 	"go.uber.org/zap"
@@ -53,7 +53,7 @@ runItAgain:
 	if len(zapBeans) == 0 {
 		logger, err = zap.NewDevelopment()
 		if err != nil {
-			return errors.Errorf("failed to initialize zap logger: %v", err)
+			return fmt.Errorf("failed to initialize zap logger: %w", err)
 		}
 		beans = append(beans, logger)
 	} else {
@@ -62,7 +62,7 @@ runItAgain:
 
 	child, err := t.Container.Extend(beans...)
 	if err != nil {
-		return errors.Errorf("failed to initialize '%s' command scope context, %v", t.Command(), err)
+		return fmt.Errorf("failed to initialize '%s' command scope context: %w", t.Command(), err)
 	}
 
 	err = runServers(runtime, child, logger)
