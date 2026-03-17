@@ -67,9 +67,9 @@ func (t gzipWriter) WriteHeader(statusCode int) {
 	t.w.WriteHeader(statusCode)
 }
 
-func doWithServers(core glue.Context, cb func([]Server) error) (err error) {
+func doWithServers(core glue.Container, cb func([]Server) error) (err error) {
 
-	var contextList []glue.Context
+	var childList []glue.Container
 
 	defer func() {
 
@@ -78,7 +78,7 @@ func doWithServers(core glue.Context, cb func([]Server) error) (err error) {
 			listErr = append(listErr, errors.Errorf("recovered on error: %v", r))
 		}
 
-		for _, ctx := range contextList {
+		for _, ctx := range childList {
 			if ctx != core {
 				if e := ctx.Close(); e != nil {
 					listErr = append(listErr, e)
@@ -94,22 +94,22 @@ func doWithServers(core glue.Context, cb func([]Server) error) (err error) {
 
 	if len(core.Children()) == 0 {
 		// no child contexts found, use core context for server
-		contextList = append(contextList, core)
+		childList = append(childList, core)
 	} else {
 		for _, child := range core.Children() {
 			// Initialize child context, by default they are not initialized
 			if ctx, err := child.Object(); err != nil {
 				return errors.Errorf("server creation context '%v' failed by %v", child, err)
 			} else {
-				contextList = append(contextList, ctx)
+				childList = append(childList, ctx)
 			}
 		}
 	}
 
 	var serverList []Server
-	for _, ctx := range contextList {
+	for _, ctx := range childList {
 
-		for i, bean := range ctx.Bean(ServerClass, glue.DefaultLevel) {
+		for i, bean := range ctx.Bean(ServerClass, glue.DefaultSearchLevel) {
 			if srv, ok := bean.Object().(Server); ok {
 				serverList = append(serverList, srv)
 			} else {
@@ -117,7 +117,7 @@ func doWithServers(core glue.Context, cb func([]Server) error) (err error) {
 			}
 		}
 
-		for i, bean := range ctx.Bean(HttpServerClass, glue.DefaultLevel) {
+		for i, bean := range ctx.Bean(HttpServerClass, glue.DefaultSearchLevel) {
 			if srv, ok := bean.Object().(*http.Server); ok {
 				s := NewHttpServer(srv)
 				if err := ctx.Inject(s); err != nil {
@@ -134,7 +134,7 @@ func doWithServers(core glue.Context, cb func([]Server) error) (err error) {
 	return cb(serverList)
 }
 
-func runServers(runtime Runtime, core glue.Context, log *zap.Logger) error {
+func runServers(runtime Runtime, core glue.Container, log *zap.Logger) error {
 
 	return doWithServers(core, func(servers []Server) (err error) {
 

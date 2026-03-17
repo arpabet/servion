@@ -6,6 +6,8 @@
 package servion
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 	"go.arpabet.com/cligo"
 	"go.arpabet.com/glue"
@@ -17,35 +19,37 @@ type implRunCommand struct {
 	HomeDir string         `cli:"option=home,default=.,help=home directory of application"`
 	Bind    string         `cli:"option=bind,default=,help=bind listening address"`
 	beans   []interface{}
+
+	Container glue.Container `inject:""`
 }
 
 func RunCommand(scan ...interface{}) cligo.CliCommand {
 	return &implRunCommand{beans: scan}
 }
 
-func (cmd *implRunCommand) Command() string {
+func (t *implRunCommand) Command() string {
 	return "run"
 }
 
-func (cmd *implRunCommand) Help() (string, string) {
+func (t *implRunCommand) Help() (string, string) {
 	return "Runs the server.",
 		`This command runs the server in foreground and prints the results to standard output.
 This command accepts one argument that is profile, that helps to define how the server is running.`
 }
 
-func (cmd *implRunCommand) Run(ctx glue.Context) (err error) {
+func (t *implRunCommand) Run(ctx context.Context) (err error) {
 
 runItAgain:
 
-	beans := make([]interface{}, len(cmd.beans))
-	copy(beans, cmd.beans)
+	beans := make([]interface{}, len(t.beans))
+	copy(beans, t.beans)
 
 	// always new runtime
-	runtime := NewRuntime(cmd.HomeDir)
+	runtime := NewRuntime(t.HomeDir)
 	beans = append(beans, runtime)
 
 	var logger *zap.Logger
-	zapBeans := ctx.Bean(ZapLogClass, glue.DefaultLevel)
+	zapBeans := t.Container.Bean(ZapLogClass, glue.DefaultSearchLevel)
 	if len(zapBeans) == 0 {
 		logger, err = zap.NewDevelopment()
 		if err != nil {
@@ -56,9 +60,9 @@ runItAgain:
 		logger = zapBeans[0].Object().(*zap.Logger)
 	}
 
-	child, err := ctx.Extend(beans...)
+	child, err := t.Container.Extend(beans...)
 	if err != nil {
-		return errors.Errorf("failed to initialize '%s' command scope context, %v", cmd.Command(), err)
+		return errors.Errorf("failed to initialize '%s' command scope context, %v", t.Command(), err)
 	}
 
 	err = runServers(runtime, child, logger)
