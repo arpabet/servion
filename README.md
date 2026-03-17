@@ -34,6 +34,7 @@ Most Go microservice setups look like this: Cobra for CLI, Wire or Fx for DI, Gi
 - **Static asset serving** — with automatic gzip variant negotiation
 - **Structured logging** — zap logger factory with DI integration
 - **Property-based configuration** — from files, embedded resources, or in-memory maps
+- **Health check endpoint** — built-in `/healthz` for Kubernetes liveness/readiness probes
 - **Component status reporting** — built-in health/stats interface for monitoring
 
 ## Quick Start
@@ -140,6 +141,77 @@ if ok {
 }
 ```
 
+### Health Check
+
+Servion includes a built-in health check handler for Kubernetes liveness and readiness probes. Add `HealthHandler()` to your scanner beans:
+
+```go
+servion.HttpServerScanner("http-server",
+    servion.HealthHandler(),
+)
+```
+
+The endpoint returns JSON:
+```json
+{"status":"UP"}
+```
+
+When the runtime is shutting down it responds with `503` and `{"status":"DOWN"}`, so Kubernetes removes the pod from the load balancer.
+
+Enable detailed mode to include per-component stats:
+```properties
+health.detailed=true
+```
+
+```json
+{"status":"UP","components":{"runtime":{"name":"myapp","version":"1.0.0"}}}
+```
+
+Full example:
+```go
+package main
+
+import (
+    "go.arpabet.com/cligo"
+    "go.arpabet.com/glue"
+    "go.arpabet.com/servion"
+)
+
+func main() {
+    properties := glue.MapPropertySource{
+        "http-server.bind-address": "0.0.0.0:8000",
+        "http-server.options":      "handlers",
+        "health.detailed":          "true",
+    }
+
+    beans := []interface{}{
+        properties,
+        servion.RunCommand(servion.HttpServerScanner("http-server",
+            servion.HealthHandler(),
+        )),
+        servion.ZapLogFactory(),
+    }
+
+    cligo.Main(cligo.Beans(beans...))
+}
+```
+
+Kubernetes deployment manifest snippet:
+```yaml
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8000
+  initialDelaySeconds: 5
+  periodSeconds: 10
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 8000
+  initialDelaySeconds: 3
+  periodSeconds: 5
+```
+
 ### Configuration
 
 Properties can be loaded from multiple sources:
@@ -183,6 +255,8 @@ Configure server capabilities via the `options` property (semicolon-delimited):
 | `ratelimit.header` | `X-Forwarded-For` | Client identity header |
 | `auth.prefixes` | `/api` | URL prefixes requiring auth |
 | `auth.tokens` | — | Comma-separated allowed tokens |
+| `health.pattern` | `/healthz` | Health check URL pattern |
+| `health.detailed` | `false` | Include per-component stats in response |
 
 ## Examples
 

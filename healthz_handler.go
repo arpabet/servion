@@ -24,7 +24,7 @@ type implHealthHandler struct {
 //
 // Configuration properties:
 //
-//	health.pattern  – URL pattern (default "/health")
+//	health.pattern  – URL pattern (default "/healthz")
 //	health.detailed – include per-component stats (default false)
 func HealthHandler() HttpHandler {
 	return &implHealthHandler{}
