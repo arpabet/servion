@@ -1,6 +1,6 @@
 module go.arpabet.com/servion
 
-go 1.25.0
+go 1.23.0
 
 //replace go.arpabet.com/cligo => ../cligo
 
@@ -12,7 +12,7 @@ require (
 	go.arpabet.com/glue v1.5.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.27.1
-	golang.org/x/sync v0.20.0
+	golang.org/x/sync v0.16.0
 )
 
 require (

@@ -12,3 +12,5 @@ build: version
 update:
 	go get -u ./...
 
+list:
+	go list -m -json all | jq -r 'select(.GoVersion != null) | "\(.GoVersion) \(.Path)"' | sort -V
