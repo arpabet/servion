@@ -6,8 +6,9 @@
 package servion
 
 import (
-	"go.arpabet.com/glue"
 	"net/http"
+
+	"go.arpabet.com/glue"
 )
 
 type httpServerScanner struct {
