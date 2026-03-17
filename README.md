@@ -235,4 +235,4 @@ See the [examples](examples/) directory:
 
 ## License
 
-Business Source License 1.1 (BUSL-1.1) — Copyright (c) 2025 Karagatan LLC.
+Business Source License 1.1 (BUSL-1.1) — Copyright (c) 2026 Karagatan LLC.
