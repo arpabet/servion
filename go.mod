@@ -5,6 +5,7 @@ go 1.23.0
 //replace go.arpabet.com/cligo => ../cligo
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/prometheus/client_golang v1.23.2

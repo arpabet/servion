@@ -134,11 +134,41 @@ auth.prefixes=/api
 auth.tokens=token1,token2
 ```
 
+**JWT Authentication** — for user-facing APIs with standard JWT tokens (HMAC or RSA):
+```go
+servion.HttpServerScanner("api-server",
+    servion.AuthMiddleware(10),
+    servion.JwtAuthProvider(),
+)
+```
+```properties
+auth.prefixes=/api
+
+# HMAC (shared secret) — pick one of secret or public-key
+jwt.secret=my-secret-key
+
+# ECDSA (base64-encoded public key) — for external identity providers
+# Raw base64 DER content without PEM header/footer, suitable for cloud secret stores
+# jwt.public-key=MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE...
+
+# Optional validation
+jwt.issuer=https://auth.example.com
+jwt.audience=my-api
+
+# Claim mapping (defaults shown)
+jwt.roles-claim=roles
+jwt.scopes-claim=scope
+```
+
+Standard claims (`sub`, `iss`, `exp`, `aud`) are validated automatically. Custom claims like `email`, `name`, `preferred_username`, and `jti` are extracted into `AuthInfo.Attributes`. Roles and scopes support both array (`["admin","user"]`) and string (`"admin,user"` or `"read write"`) formats.
+
 Access auth info in handlers:
 ```go
 auth, ok := servion.AuthFromContext(r.Context())
 if ok {
     fmt.Println("subject:", auth.Subject)
+    fmt.Println("roles:", auth.Roles)
+    fmt.Println("email:", auth.Attributes["email"])
 }
 ```
 
@@ -298,6 +328,12 @@ Configure server capabilities via the `options` property (semicolon-delimited):
 | `ratelimit.header` | `X-Forwarded-For` | Client identity header |
 | `auth.prefixes` | `/api` | URL prefixes requiring auth |
 | `auth.tokens` | — | Comma-separated allowed tokens |
+| `jwt.secret` | — | HMAC shared secret (mutually exclusive with `jwt.public-key`) |
+| `jwt.public-key` | — | ECDSA public key as base64 DER string (ES256/ES384/ES512) |
+| `jwt.issuer` | — | Expected issuer claim (optional) |
+| `jwt.audience` | — | Expected audience claim (optional) |
+| `jwt.roles-claim` | `roles` | JWT claim name for roles |
+| `jwt.scopes-claim` | `scope` | JWT claim name for scopes |
 | `health.pattern` | `/healthz` | Health check URL pattern |
 | `health.detailed` | `false` | Include per-component stats in response |
 | `cors.prefixes` | `/` | URL prefixes for CORS |
@@ -362,6 +398,7 @@ See the [examples](examples/) directory:
 | [zap](https://go.uber.org/zap) | Structured logging |
 | [x/sync](https://golang.org/x/sync) | Concurrency (errgroup) |
 | [prometheus/client_golang](https://github.com/prometheus/client_golang) | Prometheus metrics |
+| [golang-jwt/jwt](https://github.com/golang-jwt/jwt) | JWT authentication |
 
 ## License
 
