@@ -26,10 +26,9 @@ func (t *implAuthTokenProvider) PostConstruct() error {
 				return fmt.Errorf("token must not contain comma")
 			}
 
-			sum := sha256.Sum256([]byte(token))
-			hashedToken := hex.EncodeToString(sum[:])
+			hashedToken := hashToken(token)
 
-			t.allowed[token] = AuthInfo{
+			t.allowed[hashedToken] = AuthInfo{
 				HashedToken: hashedToken,
 				Subject:     hashedToken,
 			}
@@ -37,14 +36,21 @@ func (t *implAuthTokenProvider) PostConstruct() error {
 		}
 	}
 
+	// clear raw tokens so they are not retained in memory
+	t.Tokens = nil
+
 	return nil
 }
 
 func (t *implAuthTokenProvider) Authenticate(token string) (AuthInfo, error) {
-	if info, ok := t.allowed[token]; ok {
+	h := hashToken(token)
+	if info, ok := t.allowed[h]; ok {
 		return info, nil
-	} else {
-		return AuthInfo{}, ErrUnauthorized
 	}
+	return AuthInfo{}, ErrUnauthorized
+}
 
+func hashToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }
