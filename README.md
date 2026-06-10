@@ -134,7 +134,7 @@ auth.prefixes=/api
 auth.tokens=token1,token2
 ```
 
-**JWT Authentication** — for user-facing APIs with standard JWT tokens (HMAC or RSA):
+**JWT Authentication** — for user-facing APIs with standard JWT tokens (HMAC or ECDSA):
 ```go
 servion.HttpServerScanner("api-server",
     servion.AuthMiddleware(10),
@@ -169,6 +169,128 @@ if ok {
     fmt.Println("subject:", auth.Subject)
     fmt.Println("roles:", auth.Roles)
     fmt.Println("email:", auth.Attributes["email"])
+}
+```
+
+#### JWT Tooling
+
+The `cmd/jwttool` CLI generates ECDSA key pairs and signs JWT tokens for development and automation.
+
+Install:
+```bash
+go install go.arpabet.com/servion/cmd/jwttool@latest
+```
+
+**Generate an ECDSA P-256 key pair:**
+```bash
+$ jwttool generate-keys
+# ECDSA P-256 key pair
+# Keep the private key secret. Use the public key in jwt.public-key property.
+
+private-key=MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg...
+public-key=MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE...
+```
+
+Copy the `public-key` value into your Servion configuration:
+```properties
+jwt.public-key=MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE...
+```
+
+**Generate a token (ECDSA):**
+```bash
+$ jwttool generate-token \
+    -k "$PRIVATE_KEY" \
+    -s user@example.com \
+    -i https://auth.example.com \
+    -a my-api \
+    -r admin,editor \
+    --scopes read,write \
+    --attr email=user@example.com \
+    --attr name="John Doe" \
+    -e 24h
+
+eyJhbGciOiJFUzI1NiIs...
+```
+
+**Generate a token (HMAC) for service-to-service auth:**
+```bash
+$ jwttool generate-token \
+    --secret my-shared-secret \
+    -s service-account-1 \
+    -r service \
+    -e 365d
+
+eyJhbGciOiJIUzI1NiIs...
+```
+
+**Interactive mode** — prompts for each field:
+```bash
+$ jwttool generate-token -I
+Signing method (ecdsa/hmac) [ecdsa]: hmac
+HMAC secret: my-secret
+Subject (sub): user@example.com
+Issuer (iss) []: my-issuer
+Audience (aud) []: my-api
+Roles (comma-separated) []: admin
+Scopes (comma-separated) []: read,write
+Attributes (key=value, comma-separated) []: email=user@example.com
+Expiry [1h]: 24h
+eyJhbGciOiJIUzI1NiIs...
+```
+
+**Test the token with curl:**
+```bash
+TOKEN=$(jwttool generate-token -k "$PRIVATE_KEY" -s user@example.com -r admin -e 1h)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/hello
+```
+
+Full server example with JWT authentication:
+```go
+package main
+
+import (
+    "fmt"
+    "net/http"
+
+    "go.arpabet.com/cligo"
+    "go.arpabet.com/glue"
+    "go.arpabet.com/servion"
+)
+
+type UserHandler struct{}
+
+func (h *UserHandler) Pattern() string { return "/api/me" }
+
+func (h *UserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+    auth, ok := servion.AuthFromContext(r.Context())
+    if !ok {
+        http.Error(w, "no auth", http.StatusUnauthorized)
+        return
+    }
+    fmt.Fprintf(w, "Hello %s, roles: %v\n", auth.Subject, auth.Roles)
+}
+
+func main() {
+    properties := glue.MapPropertySource{
+        "http-server.bind-address": "0.0.0.0:8000",
+        "http-server.options":      "handlers",
+        "auth.prefixes":            "/api",
+        "jwt.public-key":           "<paste public-key from jwttool generate-keys>",
+        "jwt.issuer":               "https://auth.example.com",
+    }
+
+    beans := []interface{}{
+        properties,
+        servion.RunCommand(servion.HttpServerScanner("http-server",
+            &UserHandler{},
+            servion.AuthMiddleware(10),
+            servion.JwtAuthProvider(),
+            servion.HealthHandler(),
+        )),
+        servion.ZapLogFactory(false),
+    }
+
+    cligo.Main(cligo.Beans(beans...))
 }
 ```
 
