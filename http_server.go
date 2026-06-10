@@ -39,7 +39,7 @@ func (t *implHttpServer) PostConstruct() error {
 
 func (t *implHttpServer) Bind() (err error) {
 
-	t.listener, err = net.Listen("tcp4", t.srv.Addr)
+	t.listener, err = net.Listen("tcp", t.srv.Addr)
 	if err != nil {
 		return fmt.Errorf("can not bind to port '%s': %w", t.srv.Addr, err)
 	}

@@ -5,8 +5,13 @@ all: build
 version:
 	@echo $(VERSION)
 
-build: version
-	go test -cover ./...
+vet:
+	go vet ./...
+
+test: vet
+	go test -cover -race ./...
+
+build: test
 	go build -v
 
 update:

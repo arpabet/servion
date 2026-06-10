@@ -22,7 +22,7 @@ func main() {
 		properties,
 		servion.RunCommand(servion.HttpServerScanner("web-server"),
 			servion.HttpServerScanner("cdr-server")),
-		servion.ZapLogFactory(),
+		servion.ZapLogFactory(true),
 	}
 
 	cligo.Main(cligo.Beans(beans...))

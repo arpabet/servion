@@ -21,7 +21,7 @@ func main() {
 	beans := []interface{}{
 		properties,
 		servion.RunCommand(servion.HttpServerScanner("http-server"), WebsocketHander()),
-		servion.ZapLogFactory(),
+		servion.ZapLogFactory(true),
 	}
 
 	cligo.Main(cligo.Beans(beans...))

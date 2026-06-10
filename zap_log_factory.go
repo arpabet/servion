@@ -6,23 +6,28 @@
 package servion
 
 import (
+	"reflect"
+
 	"go.arpabet.com/glue"
 	"go.uber.org/zap"
-	"reflect"
 )
 
 type implZapLogFactory struct {
-	Properties glue.Properties `inject`
+	Properties  glue.Properties `inject:""`
+	development bool
 }
 
-func ZapLogFactory() glue.FactoryBean {
-	return &implZapLogFactory{}
+func ZapLogFactory(development bool) glue.FactoryBean {
+	return &implZapLogFactory{development: development}
 }
 
 func (t *implZapLogFactory) Object() (object interface{}, err error) {
 	defer PanicToError(&err)
 
-	return zap.NewDevelopment()
+	if t.development {
+		return zap.NewDevelopment()
+	}
+	return zap.NewProduction()
 }
 
 func (t *implZapLogFactory) ObjectType() reflect.Type { return ZapLogClass }

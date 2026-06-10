@@ -12,7 +12,7 @@ import (
 )
 
 func doRun(scanner glue.Scanner) (err error) {
-	context, err := glue.New(ZapLogFactory(), scanner)
+	context, err := glue.New(ZapLogFactory(true), scanner)
 	if err != nil {
 		return err
 	}

@@ -88,8 +88,6 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 				handlerList = append(handlerList, pattern)
 				serveMux.Handle(pattern, h)
 
-				handlerList = append(handlerList, pattern)
-				serveMux.Handle(pattern, h)
 			}
 		}
 	}
