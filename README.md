@@ -17,7 +17,7 @@ Most Go microservice setups look like this: Cobra for CLI, Wire or Fx for DI, Gi
 | CLI | Built-in | Separate (Cobra) | goctl (codegen) | No |
 | Dependency Injection | Built-in (glue) | Built-in (Dig) | No | Manual/Wire |
 | HTTP Server | Built-in | Via lifecycle hooks | Built-in | Built-in |
-| Built-in Middleware | Gzip, RateLimit, Auth | None | Built-in | Excellent |
+| Built-in Middleware | Gzip, RateLimit, Auth, CORS, Metrics, AccessLog, RequestID | None | Built-in | Excellent |
 | Multiple Servers | Yes, isolated contexts | Manual | No | No |
 | Graceful Restart | SIGHUP | No | No | No |
 | Lines to Hello World | ~15 | ~40 | ~30 | ~50 |
@@ -26,7 +26,8 @@ Most Go microservice setups look like this: Cobra for CLI, Wire or Fx for DI, Gi
 
 - **Container-based architecture** — every component is a DI bean with automatic lifecycle management
 - **Multiple concurrent servers** — run HTTP, API, and admin servers in one process with isolated child contexts
-- **Built-in middleware** — adaptive gzip compression, sliding-window rate limiting, bearer token authentication
+- **Built-in middleware** — adaptive gzip compression, sliding-window rate limiting, bearer token authentication, CORS, request ID, access logging, Prometheus metrics
+- **Prometheus metrics** — built-in `/metrics` endpoint and per-handler instrumentation
 - **CLI interface** — `--home`, `--bind` flags and extensible command structure via [cligo](https://go.arpabet.com/cligo)
 - **Graceful shutdown & restart** — SIGINT/SIGTERM for shutdown, SIGHUP for zero-downtime restart
 - **WebSocket support** — Gorilla WebSocket integration with handler pattern routing
@@ -57,7 +58,7 @@ func main() {
 	beans := []interface{}{
 		properties,
 		servion.RunCommand(servion.HttpServerScanner("http-server")),
-		servion.ZapLogFactory(),
+		servion.ZapLogFactory(true),
 	}
 
 	cligo.Main(cligo.Beans(beans...))
@@ -98,7 +99,7 @@ beans := []interface{}{
         servion.HttpServerScanner("web-server"),
         servion.HttpServerScanner("api-server"),
     ),
-    servion.ZapLogFactory(),
+    servion.ZapLogFactory(true),
 }
 ```
 
@@ -140,6 +141,48 @@ if ok {
     fmt.Println("subject:", auth.Subject)
 }
 ```
+
+**CORS** — cross-origin resource sharing with configurable origins:
+```properties
+cors.prefixes=/
+cors.allow-origins=https://example.com;https://app.example.com
+cors.allow-methods=GET;POST;PUT;DELETE;PATCH;OPTIONS
+cors.allow-headers=Authorization;Content-Type;X-Request-ID
+cors.expose-headers=X-Request-ID
+cors.allow-credentials=false
+cors.max-age=86400
+```
+
+**Request ID** — generates or propagates `X-Request-ID` for distributed tracing:
+```properties
+requestid.prefixes=/
+```
+
+Access the request ID in handlers:
+```go
+id, ok := servion.RequestIDFromContext(r.Context())
+```
+
+**Access Logging** — structured request/response logging with zap:
+```properties
+accesslog.prefixes=/
+```
+
+Logs method, path, status, duration, bytes, remote address, request ID, and user agent for every request.
+
+**Prometheus Metrics** — built-in metrics endpoint and per-handler instrumentation:
+```go
+servion.HttpServerScanner("http-server",
+    servion.MetricsHandler(),
+    servion.MetricsMiddleware(100),
+)
+```
+```properties
+metrics.pattern=/metrics
+metrics.prefixes=/
+```
+
+Exposes `servion_http_requests_total`, `servion_http_request_duration_seconds`, and `servion_http_response_size_bytes`.
 
 ### Health Check
 
@@ -189,7 +232,7 @@ func main() {
         servion.RunCommand(servion.HttpServerScanner("http-server",
             servion.HealthHandler(),
         )),
-        servion.ZapLogFactory(),
+        servion.ZapLogFactory(true),
     }
 
     cligo.Main(cligo.Beans(beans...))
@@ -257,6 +300,17 @@ Configure server capabilities via the `options` property (semicolon-delimited):
 | `auth.tokens` | — | Comma-separated allowed tokens |
 | `health.pattern` | `/healthz` | Health check URL pattern |
 | `health.detailed` | `false` | Include per-component stats in response |
+| `cors.prefixes` | `/` | URL prefixes for CORS |
+| `cors.allow-origins` | `*` | Allowed origins (semicolon-delimited) |
+| `cors.allow-methods` | `GET;POST;PUT;DELETE;PATCH;OPTIONS` | Allowed HTTP methods |
+| `cors.allow-headers` | `Authorization;Content-Type;X-Request-ID` | Allowed request headers |
+| `cors.expose-headers` | `X-Request-ID` | Headers exposed to browser |
+| `cors.allow-credentials` | `false` | Allow credentials |
+| `cors.max-age` | `86400` | Preflight cache duration (seconds) |
+| `requestid.prefixes` | `/` | URL prefixes for request ID generation |
+| `accesslog.prefixes` | `/` | URL prefixes for access logging |
+| `metrics.pattern` | `/metrics` | Prometheus metrics URL pattern |
+| `metrics.prefixes` | `/` | URL prefixes for metrics instrumentation |
 
 ## Examples
 
@@ -285,8 +339,9 @@ See the [examples](examples/) directory:
 │  │  │  │ (child)  │  │  (child)   │   │  │  │
 │  │  │  └──────────┘  └────────────┘   │  │  │
 │  │  │  ┌──────────────────────────┐   │  │  │
-│  │  │  │  Middleware Chain        │   │  │  │
-│  │  │  │  Auth → RateLimit → Gzip │   │  │  │
+│  │  │  │  Middleware Chain              │   │  │  │
+│  │  │  │  CORS → ReqID → Auth → Rate  │   │  │  │
+│  │  │  │  → Metrics → Log → Gzip      │   │  │  │
 │  │  │  └──────────────────────────┘   │  │  │
 │  │  │  ┌──────────────────────────┐   │  │  │
 │  │  │  │  Handlers + Assets       │   │  │  │
@@ -306,6 +361,7 @@ See the [examples](examples/) directory:
 | [glue](https://go.arpabet.com/glue) | Dependency injection |
 | [zap](https://go.uber.org/zap) | Structured logging |
 | [x/sync](https://golang.org/x/sync) | Concurrency (errgroup) |
+| [prometheus/client_golang](https://github.com/prometheus/client_golang) | Prometheus metrics |
 
 ## License
 
