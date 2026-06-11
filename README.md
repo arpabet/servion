@@ -470,6 +470,12 @@ Configure server capabilities via the `options` property (semicolon-delimited):
 | `metrics.pattern` | `/metrics` | Prometheus metrics URL pattern |
 | `metrics.prefixes` | `/` | URL prefixes for metrics instrumentation |
 
+## CLI Tools
+
+| Tool | Install | Description |
+|------|---------|-------------|
+| [jwttool](cmd/jwttool/) | `go install go.arpabet.com/servion/cmd/jwttool@latest` | Generate ECDSA key pairs and sign JWT tokens |
+
 ## Examples
 
 See the [examples](examples/) directory:
