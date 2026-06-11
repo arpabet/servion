@@ -488,6 +488,7 @@ See the [examples](examples/) directory:
 | [child](examples/child/) | Child context isolation |
 | [websocket](examples/websocket/) | WebSocket echo server |
 | [embprops](examples/embprops/) | Embedded resource configuration |
+| [auth](examples/auth/) | JWT authentication with public and protected routes |
 
 ## Architecture
 
