@@ -1,7 +1,6 @@
 package servion
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -56,7 +55,7 @@ func (t *implAuthMiddleware) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), authContextKey, auth)
+		ctx := ContextWithAuth(r.Context(), auth)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

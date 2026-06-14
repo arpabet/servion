@@ -202,6 +202,17 @@ func AuthFromContext(ctx context.Context) (AuthInfo, bool) {
 	return info, ok
 }
 
+/*
+ContextWithAuth returns a copy of ctx carrying the authenticated identity, so it
+can later be retrieved with AuthFromContext. It is used by authentication
+middlewares and interceptors (including the optional grpc submodule) to
+propagate the identity to downstream handlers in a transport-agnostic way.
+*/
+
+func ContextWithAuth(ctx context.Context, info AuthInfo) context.Context {
+	return context.WithValue(ctx, authContextKey, info)
+}
+
 var AuthenticatorClass = reflect.TypeOf((*Authenticator)(nil)).Elem()
 
 var ErrUnauthorized = errors.New("invalid token")

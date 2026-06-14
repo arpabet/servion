@@ -31,6 +31,7 @@ Most Go microservice setups look like this: Cobra for CLI, Wire or Fx for DI, Gi
 - **CLI interface** — `--home`, `--bind` flags and extensible command structure via [cligo](https://go.arpabet.com/cligo)
 - **Graceful shutdown & restart** — SIGINT/SIGTERM for shutdown, SIGHUP for zero-downtime restart
 - **WebSocket support** — Gorilla WebSocket integration with handler pattern routing
+- **gRPC support** — optional `servion/grpc` submodule (keeps gRPC's heavy deps out of the core) with server/client factories, interceptor chaining, auth, health and reflection
 - **TLS/SSL** — optional TLS with configurable certificates
 - **Static asset serving** — with automatic gzip variant negotiation
 - **Structured logging** — zap logger factory with DI integration
@@ -432,6 +433,88 @@ Configure server capabilities via the `options` property (semicolon-delimited):
 | `assets` | Enable static asset serving |
 | `tls` | Enable TLS/SSL |
 
+## gRPC
+
+gRPC lives in a **separate module**, `go.arpabet.com/servion/grpc`, so the core
+stays light — the large gRPC dependency tree is only pulled in by services that
+actually use it. The submodule reuses the same runtime: a gRPC server is exposed
+as a `servion.Server`, so `RunCommand` binds, serves and gracefully shuts it down
+right next to your HTTP servers.
+
+```bash
+go get go.arpabet.com/servion/grpc
+```
+
+It mirrors the HTTP idiom one-to-one:
+
+| HTTP (core) | gRPC (`serviongrpc`) |
+|-------------|----------------------|
+| `HttpServerScanner` | `GrpcServerScanner` |
+| `HttpHandler` (bean) | `GrpcService` (bean, `RegisterGrpc(*grpc.Server)`) |
+| `HttpMiddleware` (ordered bean) | `UnaryInterceptor` / `StreamInterceptor` (ordered beans) |
+| `AuthMiddleware` + `Authenticator` | `AuthInterceptor` + `Authenticator` |
+| — | `GrpcClientScanner` / `GrpcClientFactory` (`*grpc.ClientConn`) |
+
+```go
+import (
+	serviongrpc "go.arpabet.com/servion/grpc"
+	"google.golang.org/grpc"
+)
+
+// a service is just a bean that registers itself
+type echoService struct {
+	echopb.UnimplementedEchoServer
+}
+
+func (t *echoService) RegisterGrpc(srv *grpc.Server) {
+	echopb.RegisterEchoServer(srv, t)
+}
+
+func main() {
+	properties := glue.MapPropertySource{
+		"grpc-server.bind-address": "0.0.0.0:9090",
+		"grpc-server.options":      "health;reflection",
+	}
+
+	beans := []interface{}{
+		properties,
+		servion.RunCommand(
+			serviongrpc.GrpcServerScanner("grpc-server",
+				&echoService{},
+				// optional, opt-in: reuses the same servion.Authenticator as HTTP
+				serviongrpc.AuthInterceptor(10),
+				servion.JwtAuthProvider(),
+			),
+		),
+		servion.ZapLogFactory(true),
+	}
+
+	cligo.Main(cligo.Beans(beans...))
+}
+```
+
+`AuthInterceptor` validates an `authorization: Bearer <token>` header with the
+`servion.Authenticator` in the context and publishes the identity via
+`servion.AuthFromContext` — the very same accessor your HTTP handlers use, so
+auth is transport-agnostic. Health and reflection methods are exempt by default.
+
+### gRPC server options
+
+Configured via the `options` property, like HTTP servers:
+
+| Option | Description |
+|--------|-------------|
+| `health` | Register `grpc.health.v1.Health` (for Kubernetes gRPC probes) |
+| `reflection` | Enable server reflection (for `grpcurl` and debugging) |
+
+Other recognized properties: `<server>.max-recv-msg-size`, `<server>.max-send-msg-size`,
+`<client>.connect-address`, `<client>.auth-token`. A client whose name mirrors its
+server (e.g. `grpc-client` ↔ `grpc-server`) auto-derives its target from the
+server's `bind-address`.
+
+See [grpc/examples/echo](grpc/examples/echo/) for a runnable server, a Go client
+and `grpcurl` usage.
+
 ## Configuration Reference
 
 | Property | Default | Description |
@@ -489,6 +572,7 @@ See the [examples](examples/) directory:
 | [websocket](examples/websocket/) | WebSocket echo server |
 | [embprops](examples/embprops/) | Embedded resource configuration |
 | [auth](examples/auth/) | JWT authentication with public and protected routes |
+| [grpc/echo](grpc/examples/echo/) | gRPC server + client (health, reflection) from the `servion/grpc` submodule |
 
 ## Architecture
 
@@ -528,6 +612,10 @@ See the [examples](examples/) directory:
 | [x/sync](https://golang.org/x/sync) | Concurrency (errgroup) |
 | [prometheus/client_golang](https://github.com/prometheus/client_golang) | Prometheus metrics |
 | [golang-jwt/jwt](https://github.com/golang-jwt/jwt) | JWT authentication |
+
+The core module depends on none of the above gRPC packages. gRPC and
+[grpc-go](https://google.golang.org/grpc) are required only by the optional
+`go.arpabet.com/servion/grpc` submodule, which has its own `go.mod`.
 
 ## License
 

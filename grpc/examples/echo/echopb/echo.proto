@@ -1,0 +1,25 @@
+/*
+ * Copyright (c) 2026 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+syntax = "proto3";
+
+package servion.example.echo;
+
+option go_package = "go.arpabet.com/servion/grpc/examples/echo/echopb;echopb";
+
+// Echo is a tiny service used by the servion gRPC example.
+service Echo {
+  // Say returns the message back to the caller, prefixed with the caller's
+  // authenticated subject when an auth interceptor is configured.
+  rpc Say(SayRequest) returns (SayResponse);
+}
+
+message SayRequest {
+  string message = 1;
+}
+
+message SayResponse {
+  string reply = 1;
+}
