@@ -2,10 +2,6 @@ module go.arpabet.com/servion/grpc
 
 go 1.23.0
 
-// Local-dev bootstrap so this submodule builds against the core in the parent
-// directory. Consumers ignore replace directives; release tooling strips it.
-// Tag the core module v0.3.0 (it introduces servion.ContextWithAuth) when
-// releasing this module.
 replace go.arpabet.com/servion => ../
 
 require (
