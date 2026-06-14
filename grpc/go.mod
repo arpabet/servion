@@ -2,7 +2,6 @@ module go.arpabet.com/servion/grpc
 
 go 1.23.0
 
-replace go.arpabet.com/servion => ../
 
 require (
 	go.arpabet.com/cligo v0.3.0
