@@ -86,7 +86,12 @@ MODULES="$(find . -name go.mod -not -path './.*' -not -path '*/examples/*' \
 
 echo "Release plan (shared $VERSION):"
 for m in $MODULES; do
-	printf "  %-12s -> tag %s\n" "$m" "$(tag_for "$m" "$(ver_for "$m")")"
+	t="$(tag_for "$m" "$(ver_for "$m")")"
+	if git rev-parse -q --verify "refs/tags/$t" >/dev/null; then
+		printf "  %-12s -> tag %s (exists, will skip)\n" "$m" "$t"
+	else
+		printf "  %-12s -> tag %s\n" "$m" "$t"
+	fi
 done
 
 # rewrite each go.mod: strip bootstrap replaces, pin internal requires
@@ -110,17 +115,35 @@ if [ "$DRY_RUN" -eq 1 ]; then
 fi
 
 git add -A
-git commit -m "release $VERSION"
+if git diff --cached --quiet; then
+	# go.mods were already in their released form (no replaces to strip, requires
+	# already pinned), so there is nothing to commit — tag the current HEAD.
+	echo "no go.mod changes to commit; tagging current HEAD"
+else
+	git commit -m "release $VERSION"
+fi
+
+# Create only the tags that don't exist yet, so re-runs add missing module tags
+# (e.g. a new submodule at an already-released shared version) instead of aborting.
 TAGS=""
 for m in $MODULES; do
 	t="$(tag_for "$m" "$(ver_for "$m")")"
+	if git rev-parse -q --verify "refs/tags/$t" >/dev/null; then
+		echo "tag $t already exists; skipping"
+		continue
+	fi
 	git tag "$t"
 	TAGS="$TAGS $t"
 done
+
+if [ -z "$TAGS" ]; then
+	echo "no new tags to create; nothing to release"
+	exit 0
+fi
 echo "tagged:$TAGS"
 
 if [ "$NO_PUSH" -eq 1 ]; then
-	echo "--no-push: created commit + tags locally; not pushed"
+	echo "--no-push: created tag(s) locally; not pushed:$TAGS"
 	exit 0
 fi
 # root module is tagged first (MODULES is sorted, "." precedes submodules) so the
