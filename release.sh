@@ -1,48 +1,50 @@
 #!/usr/bin/env bash
 #
-# Copyright (c) 2026 Karagatan LLC.
-# SPDX-License-Identifier: BUSL-1.1
+# Coordinated release for a go.arpabet.com multi-module repository.
 #
-# Coordinated release for the go.arpabet.com/servion repo.
-#
-# Unlike a pure multi-module monorepo, servion has a ROOT module
-# (go.arpabet.com/servion) plus optional submodules (e.g. go.arpabet.com/servion/grpc).
-# The root module is tagged "vX.Y.Z"; each submodule is tagged "<subdir>/vX.Y.Z"
-# (e.g. grpc/v0.3.0), per the Go multi-module convention.
+# Repo-agnostic: the module prefix is auto-detected from go.mod, so this exact
+# script works unchanged in every repo (servion, sprint, store, record, ...).
+# Keep it byte-identical across repos.
 #
 # One shared version moves every module; an interface change ripples into all of
 # them. A module carrying an extra change takes a higher patch via a per-module
-# override, keyed by subdir ("." for the root module):
+# override (keyed by subdir, "." for the root module):
 #
-#     ./release.sh v0.3.0 grpc=v0.3.1
+#     ./release.sh v1.3.0 grpc=v1.3.1
 #
 # Modules are discovered automatically (every dir with a go.mod, excluding
-# examples). Before tagging, internal `require go.arpabet.com/servion[/X]` lines
-# are pinned to the release version and the local-dev
-# `replace go.arpabet.com/servion[/X] => ..` bootstrap directives are stripped
-# (consumers ignore replaces anyway; this keeps published go.mods clean).
-# `go.work` covers local dev post-release.
+# examples). The root module is tagged "vX.Y.Z"; each submodule "<subdir>/vX.Y.Z".
+# Before tagging, internal `require <prefix>/X` lines are pinned to the release
+# version and local-dev `replace <prefix>/X => ../X` bootstrap directives are
+# stripped (consumers ignore replaces; this keeps published go.mods clean).
+# go.work covers local dev post-release.
 #
-# Tag a clean build first: `make test` before releasing.
+# Re-runs are safe: existing tags are skipped and an empty release commit is
+# tolerated, so a newly added submodule can be tagged at an already-released
+# shared version.
 #
 # Usage: ./release.sh [--dry-run] [--no-push] <version> [module=version ...]
+#
+#     --dry-run   print the plan + go.mod diff and exit, change nothing
+#     --no-push   create the commit and tags locally but do not push
 #
 # Compatible with the bash 3.2 that ships on macOS (no associative arrays/mapfile).
 #
 set -euo pipefail
 
-PREFIX="go.arpabet.com/servion"
 REMOTE="origin"
 DRY_RUN=0; NO_PUSH=0
 VERSION=""; OVERRIDES=""
 
 die() { echo "error: $*" >&2; exit 1; }
 semver_ok() { case "$1" in v[0-9]*.[0-9]*.[0-9]*) return 0;; *) return 1;; esac; }
+four_part() { case "$1" in v[0-9]*.[0-9]*.[0-9]*.[0-9]*) return 0;; *) return 1;; esac; }
 
 for a in "$@"; do
 	case "$a" in
 		--dry-run) DRY_RUN=1 ;;
 		--no-push) NO_PUSH=1 ;;
+		-h|--help) awk 'NR>1 && /^#/{sub(/^# ?/,"");print;next} NR>1{exit}' "$0"; exit 0 ;;
 		*=v*)      OVERRIDES="$OVERRIDES $a" ;;
 		v*)        VERSION="$a" ;;
 		*)         die "unrecognized arg: $a" ;;
@@ -50,6 +52,12 @@ for a in "$@"; do
 done
 [ -n "$VERSION" ] || die "usage: ./release.sh [--dry-run] [--no-push] <version> [module=version ...]"
 semver_ok "$VERSION" || die "'$VERSION' is not vMAJOR.MINOR.PATCH"
+! four_part "$VERSION" || die "'$VERSION' has four numbers; Go requires vX.Y.Z. Use a higher patch override for the module that changed."
+for tok in $OVERRIDES; do
+	v="${tok#*=}"
+	semver_ok "$v" || die "override '$tok' version is not vMAJOR.MINOR.PATCH"
+	! four_part "$v" || die "override '$tok' has four numbers; use vX.Y.Z."
+done
 
 # release version for a module key (subdir, or "." for the root module)
 ver_for() {
@@ -60,46 +68,46 @@ ver_for() {
 	echo "$VERSION"
 }
 
-# go import path of a module key
-mod_path() {
-	case "$1" in
-		.) echo "$PREFIX" ;;
-		*) echo "$PREFIX/$1" ;;
-	esac
-}
+cd "$(dirname "$0")"
+[ -d .git ] || die "must run from the repository root (no .git here)."
+[ -f go.work ] || echo "warning: no go.work at repo root."
+[ -z "$(git status --porcelain)" ] || die "working tree is dirty; commit or stash first."
 
-# git tag name of a module key at a version
-tag_for() {
-	case "$1" in
-		.) echo "$2" ;;
-		*) echo "$1/$2" ;;
-	esac
-}
+branch="$(git rev-parse --abbrev-ref HEAD)"
+[ "$branch" = "main" ] || echo "warning: on branch '$branch', not 'main'."
 
-[ -z "$(git status --porcelain)" ] || die "working tree is dirty; commit or stash first"
-
-# discover module keys: "." for the root module, "<subdir>" for each submodule.
-# examples are never their own modules and are skipped if they ever gain a go.mod.
+# discover module keys: "." for the root module, "<subdir>" for each submodule;
+# examples are never their own published modules.
 MODULES="$(find . -name go.mod -not -path './.*' -not -path '*/examples/*' \
 	| sed 's#/go.mod$##; s#^\./##' | sort)"
 [ -n "$MODULES" ] || die "no modules found"
 
+# auto-detect the module prefix from the first module's go.mod
+first="$(printf '%s\n' "$MODULES" | head -1)"
+firstmod="$(sed -n 's/^module[[:space:]]\{1,\}//p' "$first/go.mod" | head -1)"
+[ -n "$firstmod" ] || die "could not read module path from $first/go.mod"
+if [ "$first" = "." ]; then PREFIX="$firstmod"; else PREFIX="${firstmod%/$first}"; fi
+echo "module prefix: $PREFIX"
+
+# go import path / git tag for a module key
+mod_path() { case "$1" in .) echo "$PREFIX";; *) echo "$PREFIX/$1";; esac; }
+tag_for()  { case "$1" in .) echo "$2";;     *) echo "$1/$2";;        esac; }
+
 echo "Release plan (shared $VERSION):"
 for m in $MODULES; do
 	t="$(tag_for "$m" "$(ver_for "$m")")"
-	if git rev-parse -q --verify "refs/tags/$t" >/dev/null; then
-		printf "  %-12s -> tag %s (exists, will skip)\n" "$m" "$t"
+	if git rev-parse -q --verify "refs/tags/$t" >/dev/null 2>&1; then
+		printf "  %-22s -> %s (exists, will skip)\n" "$m" "$t"
 	else
-		printf "  %-12s -> tag %s\n" "$m" "$t"
+		printf "  %-22s -> %s\n" "$m" "$t"
 	fi
 done
+echo
 
 # rewrite each go.mod: strip bootstrap replaces, pin internal requires
 for m in $MODULES; do
 	gm="$m/go.mod"
-	# strip local-dev replaces of any internal module (root or submodule)
 	perl -i -ne "print unless m{^replace \Q$PREFIX\E(/|\s)}" "$gm"
-	# pin internal require versions to the release
 	for dep in $MODULES; do
 		dpath="$(mod_path "$dep")"
 		dv="$(ver_for "$dep")"
@@ -109,7 +117,7 @@ done
 
 if [ "$DRY_RUN" -eq 1 ]; then
 	echo "--- dry run: go.mod changes below, nothing committed ---"
-	git --no-pager diff -- '*go.mod'
+	git --no-pager diff -- '*go.mod' || true
 	git checkout -- . 2>/dev/null || true
 	exit 0
 fi
@@ -128,26 +136,25 @@ fi
 TAGS=""
 for m in $MODULES; do
 	t="$(tag_for "$m" "$(ver_for "$m")")"
-	if git rev-parse -q --verify "refs/tags/$t" >/dev/null; then
+	if git rev-parse -q --verify "refs/tags/$t" >/dev/null 2>&1; then
 		echo "tag $t already exists; skipping"
 		continue
 	fi
-	git tag "$t"
+	git tag -a "$t" -m "$t"
 	TAGS="$TAGS $t"
+	echo "tagged $t"
 done
 
 if [ -z "$TAGS" ]; then
 	echo "no new tags to create; nothing to release"
 	exit 0
 fi
-echo "tagged:$TAGS"
 
 if [ "$NO_PUSH" -eq 1 ]; then
 	echo "--no-push: created tag(s) locally; not pushed:$TAGS"
+	echo "  git push $REMOTE $branch && git push $REMOTE $TAGS"
 	exit 0
 fi
-# root module is tagged first (MODULES is sorted, "." precedes submodules) so the
-# submodules' `require go.arpabet.com/servion <version>` resolves once published.
-git push "$REMOTE" HEAD
+git push "$REMOTE" "$branch"
 git push "$REMOTE" $TAGS
 echo "released $VERSION"
