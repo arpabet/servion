@@ -2,11 +2,10 @@ module go.arpabet.com/servion/grpc
 
 go 1.23.0
 
-
 require (
 	go.arpabet.com/cligo v0.3.0
 	go.arpabet.com/glue v1.5.0
-	go.arpabet.com/servion v0.3.0
+	go.arpabet.com/servion v1.3.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.27.1
 	google.golang.org/grpc v1.56.3

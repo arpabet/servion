@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	go.arpabet.com/cligo v0.3.0
 	go.arpabet.com/glue v1.5.0
-	go.arpabet.com/servion v0.3.0
+	go.arpabet.com/servion v1.3.0
 	go.arpabet.com/value v1.2.0
 	go.arpabet.com/value-rpc v1.2.3
 	go.uber.org/atomic v1.11.0
