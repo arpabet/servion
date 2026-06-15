@@ -1,4 +1,4 @@
-# servion/valuerpc
+# servion/vrpc
 
 Optional [value-rpc](https://go.arpabet.com/value-rpc) (vRPC) support for
 [servion](https://go.arpabet.com/servion), shipped as a separate module so the
@@ -6,11 +6,11 @@ transport/codec dependency tree stays out of the lightweight core. Services that
 don't need vRPC never pull it in.
 
 ```bash
-go get go.arpabet.com/servion/valuerpc
+go get go.arpabet.com/servion/vrpc
 ```
 
 ```go
-import servionvaluerpc "go.arpabet.com/servion/valuerpc"
+import servionvrpc "go.arpabet.com/servion/vrpc"
 ```
 
 value-rpc is a compact, schemaless RPC (arguments and results are `value.Value`,

@@ -2,8 +2,8 @@
 
 A minimal value-rpc service wired through servion. It shows the two pieces you need:
 
-- a `servionvaluerpc.ValueServerScanner("value-server", ...)` passed to `servion.RunCommand`,
-- a service bean that implements `servionvaluerpc.ValueService` (`RegisterValue`),
+- a `servionvrpc.ValueServerScanner("value-server", ...)` passed to `servion.RunCommand`,
+- a service bean that implements `servionvrpc.ValueService` (`RegisterValue`),
   which registers vRPC functions/streams (`AddFunction`, `AddOutgoingStream`,
   `AddIncomingStream`, `AddChat`) when the server binds.
 
@@ -20,7 +20,7 @@ transports via the bind address — `unix:///tmp/greeter.sock` or
 
 ## Call it
 
-With the bundled Go client (uses `servionvaluerpc.ValueClientFactory`):
+With the bundled Go client (uses `servionvrpc.ValueClientFactory`):
 
 ```bash
 go run ./examples/greeter/client World
