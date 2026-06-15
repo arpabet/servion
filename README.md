@@ -32,6 +32,7 @@ Most Go microservice setups look like this: Cobra for CLI, Wire or Fx for DI, Gi
 - **Graceful shutdown & restart** — SIGINT/SIGTERM for shutdown, SIGHUP for zero-downtime restart
 - **WebSocket support** — Gorilla WebSocket integration with handler pattern routing
 - **gRPC support** — optional `servion/grpc` submodule (keeps gRPC's heavy deps out of the core) with server/client factories, interceptor chaining, auth, health and reflection
+- **value-rpc support** — optional `servion/valuerpc` submodule for schemaless [value-rpc](https://go.arpabet.com/value-rpc) (unary, server/client streams, chat) over TCP, Unix sockets or WebSocket
 - **TLS/SSL** — optional TLS with configurable certificates
 - **Static asset serving** — with automatic gzip variant negotiation
 - **Structured logging** — zap logger factory with DI integration
@@ -515,6 +516,70 @@ server's `bind-address`.
 See [grpc/examples/echo](grpc/examples/echo/) for a runnable server, a Go client
 and `grpcurl` usage.
 
+## value-rpc
+
+[value-rpc](https://go.arpabet.com/value-rpc) (vRPC) is a compact, schemaless RPC
+— arguments and results are `value.Value`, so there is no code generation — with
+four interaction patterns (unary call, server stream, client stream, bidirectional
+chat) over TCP, Unix sockets or WebSocket. It lives in its own module,
+`go.arpabet.com/servion/valuerpc`, on the same principle as the gRPC submodule.
+
+```bash
+go get go.arpabet.com/servion/valuerpc
+```
+
+Like HTTP and gRPC, a vRPC server is exposed as a `servion.Server` and its
+endpoints are contributed as beans:
+
+| HTTP / gRPC | value-rpc (`servionvaluerpc`) |
+|-------------|-------------------------------|
+| `HttpServerScanner` / `GrpcServerScanner` | `ValueServerScanner` |
+| `HttpHandler` / `GrpcService` | `ValueService` (`RegisterValue(valueserver.Server)`) |
+| `GrpcClientFactory` | `ValueClientFactory` (`valueclient.Client`) |
+
+```go
+import (
+	servionvaluerpc "go.arpabet.com/servion/valuerpc"
+	"go.arpabet.com/value"
+	"go.arpabet.com/value-rpc/valuerpc"
+	"go.arpabet.com/value-rpc/valueserver"
+)
+
+// a service registers its functions/streams when the server binds
+type greeterService struct{}
+
+func (t *greeterService) RegisterValue(srv valueserver.Server) error {
+	return srv.AddFunction("greet", valuerpc.String, valuerpc.String, t.greet)
+}
+
+func (t *greeterService) greet(args value.Value) (value.Value, error) {
+	return value.Utf8("Hello, " + args.String() + "!"), nil
+}
+
+func main() {
+	properties := glue.MapPropertySource{
+		"value-server.bind-address": "0.0.0.0:9100", // or unix:///… or ws://…/rpc
+	}
+
+	beans := []interface{}{
+		properties,
+		servion.RunCommand(
+			servionvaluerpc.ValueServerScanner("value-server", &greeterService{}),
+		),
+		servion.ZapLogFactory(true),
+	}
+
+	cligo.Main(cligo.Beans(beans...))
+}
+```
+
+Because value-rpc authorization is per-connection (not per-call), the auth seam is
+an optional `ConnectAuthorizer` bean (called before each handshake — e.g. for
+Unix-socket peer-credential checks) rather than a token interceptor.
+
+See [valuerpc/examples/greeter](valuerpc/examples/greeter/) for a runnable server
+and a Go client.
+
 ## Configuration Reference
 
 | Property | Default | Description |
@@ -573,6 +638,7 @@ See the [examples](examples/) directory:
 | [embprops](examples/embprops/) | Embedded resource configuration |
 | [auth](examples/auth/) | JWT authentication with public and protected routes |
 | [grpc/echo](grpc/examples/echo/) | gRPC server + client (health, reflection) from the `servion/grpc` submodule |
+| [valuerpc/greeter](valuerpc/examples/greeter/) | value-rpc server + client from the `servion/valuerpc` submodule |
 
 ## Architecture
 
@@ -613,9 +679,10 @@ See the [examples](examples/) directory:
 | [prometheus/client_golang](https://github.com/prometheus/client_golang) | Prometheus metrics |
 | [golang-jwt/jwt](https://github.com/golang-jwt/jwt) | JWT authentication |
 
-The core module depends on none of the above gRPC packages. gRPC and
+The core module depends on none of the gRPC or value-rpc packages. gRPC and
 [grpc-go](https://google.golang.org/grpc) are required only by the optional
-`go.arpabet.com/servion/grpc` submodule, which has its own `go.mod`.
+`go.arpabet.com/servion/grpc` submodule; [value-rpc](https://go.arpabet.com/value-rpc)
+only by `go.arpabet.com/servion/valuerpc`. Each submodule has its own `go.mod`.
 
 ## License
 
