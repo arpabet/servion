@@ -577,8 +577,27 @@ Because value-rpc authorization is per-connection (not per-call), the auth seam 
 an optional `ConnectAuthorizer` bean (called before each handshake — e.g. for
 Unix-socket peer-credential checks) rather than a token interceptor.
 
-See [vrpc/examples/greeter](vrpc/examples/greeter/) for a runnable server
-and a Go client.
+### Obfuscation (censorship resistance)
+
+For services that must stay reachable under network censorship, vRPC connections
+can be wrapped with [obfs](https://go.arpabet.com/obfs) through two optional beans
+(precedence `Transport` > `ObfsProfile` > the default transport):
+
+- **`ObfsProfile`** — traffic shaping and the distribution-matching morpher from the
+  **zero-dependency** obfs core (`servionvrpc.StaticObfsProfile(obfs.Policy{…})`); no
+  extra dependencies enter the build. It shapes, it does not encrypt — run under TLS.
+- **`Transport`** — supply the value-rpc `Listener`/`Dialer` yourself to compose the
+  **dependency-bearing** obfs modules — TLS fingerprint mimicry (`obfs/tlscamo`),
+  active-probe defense (`obfs/reality`), or a WebRTC data channel (`obfs/webrtc`) —
+  in your own module, so uTLS/pion never enter `servion/vrpc`.
+
+Details in the [vrpc README](vrpc/README.md#obfuscation-censorship-resistance).
+
+### Examples
+
+- [vrpc/examples/greeter](vrpc/examples/greeter/) — baseline server + Go client.
+- [vrpc/examples/obfs](vrpc/examples/obfs/) — traffic-shaping **morpher** via `ObfsProfile` (zero extra deps).
+- [vrpc/examples/reality](vrpc/examples/reality/) — **active-probe defense** via a `Transport` (separate module; keeps uTLS out of `servion/vrpc`).
 
 ## Configuration Reference
 
@@ -639,6 +658,8 @@ See the [examples](examples/) directory:
 | [auth](examples/auth/) | JWT authentication with public and protected routes |
 | [grpc/echo](grpc/examples/echo/) | gRPC server + client (health, reflection) from the `servion/grpc` submodule |
 | [vrpc/greeter](vrpc/examples/greeter/) | value-rpc server + client from the `servion/vrpc` submodule |
+| [vrpc/obfs](vrpc/examples/obfs/) | value-rpc with traffic-shaping obfuscation (the morpher) via `ObfsProfile` |
+| [vrpc/reality](vrpc/examples/reality/) | value-rpc with active-probe defense (`obfs/reality`) via a `Transport` bean |
 
 ## Architecture
 
