@@ -203,6 +203,51 @@ func TestGrpcServer_AuthInterceptor(t *testing.T) {
 	}
 }
 
+// TestAuthInterceptor_RejectsMalformedMethod verifies the defense-in-depth
+// guard: a non-canonical method name (missing the mandatory leading slash) is
+// rejected with codes.Unimplemented before any exempt/auth logic runs, so it
+// cannot bypass authorization (GHSA grpc-go ":path" leading-slash class).
+func TestAuthInterceptor_RejectsMalformedMethod(t *testing.T) {
+
+	ctx, err := glue.New(
+		servion.ZapLogFactory(true),
+		serviongrpc.AuthInterceptor(10),
+		stubAuthBean(),
+	)
+	if err != nil {
+		t.Fatalf("context: %v", err)
+	}
+	defer ctx.Close()
+
+	list := ctx.Bean(serviongrpc.UnaryInterceptorClass, glue.DefaultSearchLevel)
+	if len(list) != 1 {
+		t.Fatalf("expected exactly 1 UnaryInterceptor, got %d", len(list))
+	}
+	fn := list[0].Object().(serviongrpc.UnaryInterceptor).UnaryInterceptor()
+
+	called := false
+	handler := func(context.Context, interface{}) (interface{}, error) {
+		called = true
+		return nil, nil
+	}
+
+	// "/grpc.health.v1.Health/Check" is exempt; the malformed variant must NOT
+	// inherit that exemption and must be rejected outright.
+	for _, method := range []string{
+		"grpc.health.v1.Health/Check", // exempt prefix, but no leading slash
+		"servion.test.Echo/Hello",     // protected method, no leading slash
+		"",                            // empty
+	} {
+		_, err := fn(context.Background(), nil, &grpc.UnaryServerInfo{FullMethod: method}, handler)
+		if status.Code(err) != codes.Unimplemented {
+			t.Fatalf("method %q: expected Unimplemented, got %v", method, err)
+		}
+	}
+	if called {
+		t.Fatal("handler must not run for malformed method names")
+	}
+}
+
 func TestGrpcClientFactory_Connect(t *testing.T) {
 
 	addr, teardown := startServer(t,

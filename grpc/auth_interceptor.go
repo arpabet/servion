@@ -80,6 +80,18 @@ func (t *implAuthInterceptor) isExempt(fullMethod string) bool {
 
 func (t *implAuthInterceptor) authenticate(ctx context.Context, fullMethod string) (context.Context, error) {
 
+	// Reject non-canonical method names defensively. A :path lacking the
+	// mandatory leading slash (e.g. "Service/Method" instead of
+	// "/Service/Method") must never reach the exempt-prefix matching below,
+	// which assumes the canonical "/Service/Method" form - otherwise a
+	// malformed path could slip past an exempt or deny rule (CVE-class
+	// authorization bypass, GHSA grpc-go ":path" leading-slash). Modern
+	// grpc-go rejects these at the transport layer; this guard keeps the auth
+	// layer correct regardless of the grpc version in the final binary.
+	if len(fullMethod) == 0 || fullMethod[0] != '/' {
+		return nil, status.Error(codes.Unimplemented, "malformed method name")
+	}
+
 	if t.isExempt(fullMethod) {
 		return ctx, nil
 	}
