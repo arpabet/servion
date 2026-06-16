@@ -4,4 +4,6 @@ use (
 	.
 	./grpc
 	./vrpc
+	../obfs
+	../value-rpc
 )

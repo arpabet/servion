@@ -23,6 +23,8 @@ type implValueServer struct {
 	Properties glue.Properties   `inject:""`
 	Services   []ValueService    `inject:"optional,level=1"`
 	Authorizer ConnectAuthorizer `inject:"optional"`
+	Obfs       ObfsProfile       `inject:"optional"`
+	Transport  Transport         `inject:"optional"`
 
 	beanName string
 
@@ -71,7 +73,19 @@ func (t *implValueServer) Bind() (err error) {
 	keepAlive := t.Properties.GetDuration(fmt.Sprintf("%s.keep-alive", t.beanName), valueserver.KeepAlivePeriod)
 	writeTimeout := t.Properties.GetDuration(fmt.Sprintf("%s.write-timeout", t.beanName), valueserver.DefaultTimeout)
 
-	lis, err := valuerpc.NewListener(listenAddr, keepAlive, writeTimeout)
+	var lis valuerpc.Listener
+	switch {
+	case t.Transport != nil:
+		// The application fully supplies the transport (e.g. obfs/tlscamo or
+		// obfs/reality composed in its own module); keep-alive is its concern.
+		lis, err = t.Transport.Listener(listenAddr, writeTimeout)
+	case t.Obfs != nil:
+		// Obfuscation shapes the byte stream below value-rpc's framing; it needs a
+		// stream transport and supersedes keep-alive (cover traffic keeps it live).
+		lis, err = obfsListener(listenAddr, t.Obfs.ObfsPolicy(), writeTimeout)
+	default:
+		lis, err = valuerpc.NewListener(listenAddr, keepAlive, writeTimeout)
+	}
 	if err != nil {
 		return fmt.Errorf("can not bind to '%s': %w", listenAddr, err)
 	}
@@ -97,7 +111,9 @@ func (t *implValueServer) Bind() (err error) {
 		zap.String("bean", t.beanName),
 		zap.String("addr", srv.Addr().String()),
 		zap.Int("services", len(t.Services)),
-		zap.Bool("authorizer", t.Authorizer != nil))
+		zap.Bool("authorizer", t.Authorizer != nil),
+		zap.Bool("obfs", t.Obfs != nil),
+		zap.Bool("transport", t.Transport != nil))
 
 	return nil
 }

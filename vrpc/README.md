@@ -55,6 +55,33 @@ opened, the server created and all `ValueService` beans registered in `Bind()`.
 | `<client>.socks5` | client | optional SOCKS5 proxy `host:port` (TCP only) |
 | `<client>.timeout-ms` | client | per-call timeout in milliseconds |
 
+## Obfuscation (censorship resistance)
+
+For deployments behind network censorship, vRPC connections can be wrapped with
+[obfs](https://go.arpabet.com/obfs) through two optional beans (precedence:
+`Transport` > `ObfsProfile` > the default scheme transport):
+
+- **`ObfsProfile`** — traffic shaping from the **zero-dependency** obfs core: fixed
+  cells or the distribution-matching **morpher**, padding, timing jitter and cover
+  traffic. Register `StaticObfsProfile(obfs.Policy{…})` (or your own bean) on the
+  server and client so both ends agree. Stream transports only (tcp/unix); it
+  shapes, it does not encrypt — run it under TLS.
+
+  ```go
+  servionvrpc.ValueServerScanner("value-server",
+      servionvrpc.StaticObfsProfile(obfs.Policy{SizeSampler: obfs.UniformSize(64, 1024)}),
+      &greeterService{},
+  )
+  ```
+
+- **`Transport`** — a bean that fully supplies the value-rpc `Listener`/`Dialer`, so
+  your application can compose the **dependency-bearing** obfs submodules — TLS
+  fingerprint mimicry (`obfs/tlscamo`), active-probe defense (`obfs/reality`) or a
+  WebRTC data channel (`obfs/webrtc`) — in its own module. Those heavy deps (uTLS,
+  pion) stay in your app and **never enter servion/vrpc**. The `Transport` doc
+  comment has a copy-paste `obfs/reality` implementation; for `reality`, point its
+  fallback at servion's own HTTP server so an active probe sees a genuine site.
+
 ## Example
 
 See [examples/greeter](examples/greeter/) for a runnable server and a Go client.
