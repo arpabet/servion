@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	go.arpabet.com/glue v1.5.0
 	go.arpabet.com/obfs/reality v0.0.0-00010101000000-000000000000
-	go.arpabet.com/obfs/tlscamo v0.0.0-00010101000000-000000000000
+	go.arpabet.com/obfs/tlscamo v0.1.0
 	go.arpabet.com/servion v1.3.0
 	go.arpabet.com/servion/vrpc v0.0.0-00010101000000-000000000000
 	go.arpabet.com/value v1.2.0

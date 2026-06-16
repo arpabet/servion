@@ -1,2 +1,6 @@
 .idea/
 .DS_Store
+
+# compiled binaries / build artifacts (Go output has no extension, so anchor by path)
+/auth
+/vrpc/examples/reality/reality
