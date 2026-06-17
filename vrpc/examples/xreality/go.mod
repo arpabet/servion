@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	go.arpabet.com/glue v1.5.0
+	go.arpabet.com/obfs v0.1.0
 	go.arpabet.com/obfs/xreality v0.0.0-00010101000000-000000000000
 	go.arpabet.com/servion v1.3.0
 	go.arpabet.com/servion/vrpc v0.0.0-00010101000000-000000000000
@@ -30,7 +31,6 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	go.arpabet.com/cligo v0.3.0 // indirect
-	go.arpabet.com/obfs v0.1.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.28.0 // indirect

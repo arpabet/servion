@@ -35,6 +35,7 @@ import (
 	"time"
 
 	"go.arpabet.com/glue"
+	"go.arpabet.com/obfs"
 	"go.arpabet.com/obfs/xreality"
 	"go.arpabet.com/servion"
 	servionvrpc "go.arpabet.com/servion/vrpc"
@@ -45,6 +46,17 @@ import (
 )
 
 const borrowedName = "www.realsite.com"
+
+// shaping is the traffic-shaping policy applied INSIDE the REALITY tunnel, on both
+// ends symmetrically (same CellSize). REALITY hides the *handshake* (it looks like a
+// browser hitting a real site); the shaper hides the *post-handshake traffic shape*
+// (per-operation sizes and timing) that handshake camouflage leaves exposed — the two
+// are independent layers and the recipe is to run both. Fixed 512-byte cells make
+// every value-rpc frame identical on the wire; FRONT adds front-loaded cover padding.
+var shaping = obfs.Policy{
+	CellSize: 512,
+	Front:    &obfs.FrontConfig{Window: 500 * time.Millisecond, MaxCount: 6},
+}
 
 // greeterService is the value-rpc service the authenticated tunnel reaches.
 type greeterService struct{}
@@ -78,7 +90,13 @@ func (t *realityTransport) Listener(addr string, wt time.Duration) (valuerpc.Lis
 		TimeSkew:   90 * time.Second,
 	})
 	return valuerpc.NewAcceptListener(
-		func() (io.ReadWriteCloser, error) { return rl.Accept() },
+		func() (io.ReadWriteCloser, error) {
+			c, err := rl.Accept()
+			if err != nil {
+				return nil, err
+			}
+			return obfs.Wrap(c, shaping), nil // shape INSIDE the REALITY tunnel
+		},
 		base.Addr(), rl.Close, wt), nil
 }
 
@@ -88,7 +106,13 @@ func (t *realityTransport) Dialer(addr string, wt time.Duration) (valuerpc.Diale
 		ShortID:         t.shortID,
 		ServerName:      borrowedName,
 	})
-	return valuerpc.NewFuncDialer(func() (io.ReadWriteCloser, error) { return d() }, wt), nil
+	return valuerpc.NewFuncDialer(func() (io.ReadWriteCloser, error) {
+		c, err := d()
+		if err != nil {
+			return nil, err
+		}
+		return obfs.Wrap(c, shaping), nil // shape INSIDE the REALITY tunnel (same policy as the server)
+	}, wt), nil
 }
 
 func main() {
@@ -145,6 +169,7 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Printf("\nauthenticated client -> %s\n", resp.String())
+	fmt.Printf("   (value-rpc traffic shaped inside the tunnel: %d-byte cells + FRONT padding)\n", shaping.CellSize)
 
 	// --- censor-style probe: a plain TLS client with no REALITY auth. The server
 	// cannot authenticate it, so it is raw-spliced to the borrowed site, and the probe

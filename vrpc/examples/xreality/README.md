@@ -16,6 +16,7 @@ Output (abridged):
 ... ValueServerBind  {... "transport": true}
 ... ValueClientFactory {... "transport": true}
 authenticated client -> Hello, World!
+   (value-rpc traffic shaped inside the tunnel: 512-byte cells + FRONT padding)
 active probe (no auth) -> "HTTP/1.1 200 OK ... Borrowed real website"
 active probe sees certificate for: www.realsite.com
 ```
@@ -57,7 +58,11 @@ is just a `net.Conn` through its seam.
 This demo is one process. In production: split the server and client; **distribute
 the server's X25519 public key and the shortId out of band**; point `Dest` at a real,
 high-reputation TLS site whose name you borrow (it must speak TLS 1.3 and not be
-co-located with you); enforce the replay window (`TimeSkew`); and run an `obfs`
-shaping layer **inside** the tunnel, since REALITY only hides the handshake, not the
-post-handshake traffic shape. This transport is **not wire-compatible with Xray**
+co-located with you); and enforce the replay window (`TimeSkew`).
+
+This demo already shows the **full recipe**: it runs an `obfs` shaping layer (fixed
+512-byte cells + FRONT padding) *inside* the REALITY tunnel — see the `shaping` policy
+in `main.go` — because REALITY only hides the handshake, not the post-handshake traffic
+shape. Tune that policy (morpher / `Paced` / cover) to your workload; the two layers are
+independent (obfs/REALITY.md §8). This transport is **not wire-compatible with Xray**
 (both peers run obfs/xreality); see obfs/REALITY.md for the Xray-interop path.
