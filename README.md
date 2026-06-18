@@ -539,6 +539,8 @@ endpoints are contributed as beans:
 
 ```go
 import (
+	"context"
+
 	servionvrpc "go.arpabet.com/servion/vrpc"
 	"go.arpabet.com/value"
 	"go.arpabet.com/value-rpc/valuerpc"
@@ -552,7 +554,7 @@ func (t *greeterService) RegisterValue(srv valueserver.Server) error {
 	return srv.AddFunction("greet", valuerpc.String, valuerpc.String, t.greet)
 }
 
-func (t *greeterService) greet(args value.Value) (value.Value, error) {
+func (t *greeterService) greet(ctx context.Context, args value.Value) (value.Value, error) {
 	return value.Utf8("Hello, " + args.String() + "!"), nil
 }
 
@@ -586,18 +588,33 @@ can be wrapped with [obfs](https://go.arpabet.com/obfs) through two optional bea
 - **`ObfsProfile`** — traffic shaping and the distribution-matching morpher from the
   **zero-dependency** obfs core (`servionvrpc.StaticObfsProfile(obfs.Policy{…})`); no
   extra dependencies enter the build. It shapes, it does not encrypt — run under TLS.
-- **`Transport`** — supply the value-rpc `Listener`/`Dialer` yourself to compose the
-  **dependency-bearing** obfs modules — TLS fingerprint mimicry (`obfs/tlscamo`),
-  active-probe defense (`obfs/reality`), or a WebRTC data channel (`obfs/webrtc`) —
-  in your own module, so uTLS/pion never enter `servion/vrpc`.
+- **`Transport`** — supply the value-rpc `Listener`/`Dialer` yourself to compose a
+  **dependency-bearing** transport in your own module, so the weight never enters
+  `servion/vrpc`: TLS fingerprint mimicry (`obfs/tlscamo`), active-probe defense
+  (`obfs/reality`, `obfs/xreality`), Xray-compatible REALITY (`obfs/xrayreality`), a
+  WebRTC data channel (`obfs/webrtc`), or **QUIC** (`value-rpc/quic`).
 
 Details in the [vrpc README](vrpc/README.md#obfuscation-censorship-resistance).
+
+### Resilience (client governance)
+
+Retry, circuit breaking, timeouts, rate limiting, bulkheading and fallback come from
+the [value-rpc/resilience](https://go.arpabet.com/value-rpc/resilience) module as
+client interceptors; servion installs them on a `ValueClientFactory` client from an
+optional `ResiliencePolicy` bean — build it from properties with
+`servionvrpc.ResiliencePolicyFactory(beanName)` or fix a chain with
+`StaticResiliencePolicy`. See the [vrpc README](vrpc/README.md#resilience-service-governance).
 
 ### Examples
 
 - [vrpc/examples/greeter](vrpc/examples/greeter/) — baseline server + Go client.
+- [vrpc/examples/resilience](vrpc/examples/resilience/) — retry/circuit-breaker/timeout via `ResiliencePolicyFactory`.
 - [vrpc/examples/obfs](vrpc/examples/obfs/) — traffic-shaping **morpher** via `ObfsProfile` (zero extra deps).
-- [vrpc/examples/reality](vrpc/examples/reality/) — **active-probe defense** via a `Transport` (separate module; keeps uTLS out of `servion/vrpc`).
+- [vrpc/examples/quic](vrpc/examples/quic/) — `Transport` over **QUIC** (separate module).
+- [vrpc/examples/tlscamo](vrpc/examples/tlscamo/) — browser-mimicking TLS ClientHello via a `Transport`.
+- [vrpc/examples/reality](vrpc/examples/reality/) — **active-probe defense** via a `Transport` (keeps uTLS out of `servion/vrpc`).
+- [vrpc/examples/xreality](vrpc/examples/xreality/) — REALITY-style transport + in-tunnel traffic shaping.
+- [vrpc/examples/xrayreality](vrpc/examples/xrayreality/) — **Xray-compatible** REALITY (genuine `xtls/reality`).
 
 ## Configuration Reference
 

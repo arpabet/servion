@@ -5,3 +5,6 @@
 /auth
 /vrpc/examples/reality/reality
 /vrpc/examples/xreality/xreality
+/vrpc/examples/xrayreality/xrayreality
+/vrpc/examples/tlscamo/tlscamo
+/vrpc/examples/quic/quic
