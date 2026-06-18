@@ -2,9 +2,6 @@ go 1.25.8
 
 use (
 	.
-	../obfs
-	../value-rpc
-	../value-rpc/resilience
 	./grpc
 	./vrpc
 )

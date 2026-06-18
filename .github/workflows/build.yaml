@@ -5,6 +5,10 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  # Manual run from the GitHub Actions UI ("Run workflow" button) or the API/CLI
+  # (`gh workflow run "Servion CI"`), so the suite can be started on demand — e.g.
+  # before a release or after a dependency bump.
+  workflow_dispatch:
 
 # Keep go.arpabet.com modules off Google's public module proxy/checksum DB:
 # GOPRIVATE expands to GONOPROXY + GONOSUMDB, so these modules are fetched
