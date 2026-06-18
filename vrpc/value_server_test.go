@@ -6,6 +6,7 @@
 package servionvrpc_test
 
 import (
+	"context"
 	"testing"
 
 	"go.arpabet.com/glue"
@@ -24,7 +25,7 @@ func (t *greeterService) RegisterValue(srv valueserver.Server) error {
 	return srv.AddFunction("greet", valuerpc.String, valuerpc.String, t.greet)
 }
 
-func (t *greeterService) greet(args value.Value) (value.Value, error) {
+func (t *greeterService) greet(ctx context.Context, args value.Value) (value.Value, error) {
 	return value.Utf8("Hello, " + args.String() + "!"), nil
 }
 
@@ -75,7 +76,7 @@ func TestValueServer_Call(t *testing.T) {
 	}
 	defer cli.Close()
 
-	resp, err := cli.CallFunction("greet", value.Utf8("World"))
+	resp, err := cli.CallFunction(context.Background(), "greet", value.Utf8("World"))
 	if err != nil {
 		t.Fatalf("call: %v", err)
 	}
@@ -112,7 +113,7 @@ func TestValueClientFactory_Connect(t *testing.T) {
 		t.Fatalf("connect: %v", err)
 	}
 
-	resp, err := cli.CallFunction("greet", value.Utf8("Servion"))
+	resp, err := cli.CallFunction(context.Background(), "greet", value.Utf8("Servion"))
 	if err != nil {
 		t.Fatalf("call via factory client: %v", err)
 	}

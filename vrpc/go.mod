@@ -19,8 +19,11 @@ require (
 // above and drop this replace.
 replace go.arpabet.com/obfs => ../../obfs
 
-// value-rpc v1.3.0 ships the bring-your-own-connection seam, so no replace needed.
-// replace go.arpabet.com/value-rpc => ../../value-rpc
+// value-rpc has unreleased changes past v1.3.0 (context-aware Dialer/Function and
+// a maxFrameSize listener bound) that this module now depends on. Resolve it from
+// the sibling working tree until a new release is tagged, then bump the require
+// above and drop this replace.
+replace go.arpabet.com/value-rpc => ../../value-rpc
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect

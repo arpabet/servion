@@ -6,6 +6,7 @@
 package servionvrpc
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -128,8 +129,9 @@ func obfsDialer(address string, policy obfs.Policy, writeTimeout time.Duration) 
 	if err != nil {
 		return nil, err
 	}
-	return valuerpc.NewFuncDialer(func() (io.ReadWriteCloser, error) {
-		base, derr := net.Dial(network, addr)
+	return valuerpc.NewFuncDialer(func(ctx context.Context) (io.ReadWriteCloser, error) {
+		var d net.Dialer
+		base, derr := d.DialContext(ctx, network, addr)
 		if derr != nil {
 			return nil, derr
 		}

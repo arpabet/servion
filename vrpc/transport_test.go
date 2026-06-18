@@ -6,6 +6,7 @@
 package servionvrpc
 
 import (
+	"context"
 	"io"
 	"net"
 	"testing"
@@ -36,15 +37,16 @@ func (tcpTransport) Listener(addr string, wt time.Duration) (valuerpc.Listener, 
 }
 
 func (tcpTransport) Dialer(addr string, wt time.Duration) (valuerpc.Dialer, error) {
-	return valuerpc.NewFuncDialer(func() (io.ReadWriteCloser, error) {
-		return net.Dial("tcp", addr)
+	return valuerpc.NewFuncDialer(func(ctx context.Context) (io.ReadWriteCloser, error) {
+		var d net.Dialer
+		return d.DialContext(ctx, "tcp", addr)
 	}, wt), nil
 }
 
 type tpGreeter struct{}
 
 func (tpGreeter) RegisterValue(srv valueserver.Server) error {
-	return srv.AddFunction("greet", valuerpc.String, valuerpc.String, func(args value.Value) (value.Value, error) {
+	return srv.AddFunction("greet", valuerpc.String, valuerpc.String, func(ctx context.Context, args value.Value) (value.Value, error) {
 		return value.Utf8("Hi, " + args.String() + "!"), nil
 	})
 }
@@ -83,7 +85,7 @@ func callGreet(t *testing.T, dialer valuerpc.Dialer, arg, want string) {
 		t.Fatalf("connect: %v", err)
 	}
 	defer cli.Close()
-	resp, err := cli.CallFunction("greet", value.Utf8(arg))
+	resp, err := cli.CallFunction(context.Background(), "greet", value.Utf8(arg))
 	if err != nil {
 		t.Fatalf("call: %v", err)
 	}

@@ -20,6 +20,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -62,7 +63,7 @@ var shaping = obfs.Policy{
 type greeterService struct{}
 
 func (greeterService) RegisterValue(srv valueserver.Server) error {
-	return srv.AddFunction("greet", valuerpc.String, valuerpc.String, func(args value.Value) (value.Value, error) {
+	return srv.AddFunction("greet", valuerpc.String, valuerpc.String, func(ctx context.Context, args value.Value) (value.Value, error) {
 		return value.Utf8("Hello, " + args.String() + "!"), nil
 	})
 }
@@ -106,7 +107,7 @@ func (t *realityTransport) Dialer(addr string, wt time.Duration) (valuerpc.Diale
 		ShortID:         t.shortID,
 		ServerName:      borrowedName,
 	})
-	return valuerpc.NewFuncDialer(func() (io.ReadWriteCloser, error) {
+	return valuerpc.NewFuncDialer(func(ctx context.Context) (io.ReadWriteCloser, error) {
 		c, err := d()
 		if err != nil {
 			return nil, err
@@ -164,7 +165,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer cli.Close()
-	resp, err := cli.CallFunction("greet", value.Utf8("World"))
+	resp, err := cli.CallFunction(context.Background(), "greet", value.Utf8("World"))
 	if err != nil {
 		log.Fatal(err)
 	}

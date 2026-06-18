@@ -6,6 +6,7 @@
 package servionvrpc
 
 import (
+	"context"
 	"testing"
 
 	"go.arpabet.com/glue"
@@ -20,7 +21,7 @@ import (
 type obfsGreeter struct{}
 
 func (obfsGreeter) RegisterValue(srv valueserver.Server) error {
-	return srv.AddFunction("greet", valuerpc.String, valuerpc.String, func(args value.Value) (value.Value, error) {
+	return srv.AddFunction("greet", valuerpc.String, valuerpc.String, func(ctx context.Context, args value.Value) (value.Value, error) {
 		return value.Utf8("Hello, " + args.String() + "!"), nil
 	})
 }
@@ -62,7 +63,7 @@ func TestObfsProfile_EndToEnd(t *testing.T) {
 	}
 	defer cli.Close()
 
-	resp, err := cli.CallFunction("greet", value.Utf8("World"))
+	resp, err := cli.CallFunction(context.Background(), "greet", value.Utf8("World"))
 	if err != nil {
 		t.Fatalf("call: %v", err)
 	}

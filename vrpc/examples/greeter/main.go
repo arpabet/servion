@@ -16,6 +16,8 @@
 package main
 
 import (
+	"context"
+
 	"go.arpabet.com/cligo"
 	"go.arpabet.com/glue"
 	"go.arpabet.com/servion"
@@ -33,7 +35,7 @@ func (t *greeterService) RegisterValue(srv valueserver.Server) error {
 	return srv.AddFunction("greet", valuerpc.String, valuerpc.String, t.greet)
 }
 
-func (t *greeterService) greet(args value.Value) (value.Value, error) {
+func (t *greeterService) greet(ctx context.Context, args value.Value) (value.Value, error) {
 	return value.Utf8("Hello, " + args.String() + "!"), nil
 }
 

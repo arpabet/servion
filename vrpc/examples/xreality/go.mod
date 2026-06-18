@@ -47,6 +47,8 @@ require (
 // release, drop these replaces and pin tagged versions.
 replace go.arpabet.com/servion/vrpc => ../../
 
+replace go.arpabet.com/value-rpc => ../../../../value-rpc
+
 replace go.arpabet.com/obfs => ../../../../obfs
 
 replace go.arpabet.com/obfs/xreality => ../../../../obfs/xreality

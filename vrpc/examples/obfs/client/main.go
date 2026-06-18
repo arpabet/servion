@@ -13,6 +13,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -59,7 +60,7 @@ func main() {
 	}
 	defer cli.Close()
 
-	resp, err := cli.CallFunction("greet", value.Utf8(name))
+	resp, err := cli.CallFunction(context.Background(), "greet", value.Utf8(name))
 	if err != nil {
 		fmt.Println("Error:", err)
 		os.Exit(1)

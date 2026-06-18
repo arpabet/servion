@@ -20,6 +20,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -48,7 +49,7 @@ import (
 type greeterService struct{}
 
 func (greeterService) RegisterValue(srv valueserver.Server) error {
-	return srv.AddFunction("greet", valuerpc.String, valuerpc.String, func(args value.Value) (value.Value, error) {
+	return srv.AddFunction("greet", valuerpc.String, valuerpc.String, func(ctx context.Context, args value.Value) (value.Value, error) {
 		return value.Utf8("Hello, " + args.String() + "!"), nil
 	})
 }
@@ -83,7 +84,7 @@ func (t *realityTransport) Dialer(addr string, wt time.Duration) (valuerpc.Diale
 		TLS:   tlscamo.Config{ServerName: t.serverName, RootCAs: t.rootCAs, Fingerprint: tlscamo.Chrome},
 		Token: t.token,
 	})
-	return valuerpc.NewFuncDialer(func() (io.ReadWriteCloser, error) { return d() }, wt), nil
+	return valuerpc.NewFuncDialer(func(ctx context.Context) (io.ReadWriteCloser, error) { return d() }, wt), nil
 }
 
 func main() {
@@ -133,7 +134,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer cli.Close()
-	resp, err := cli.CallFunction("greet", value.Utf8("World"))
+	resp, err := cli.CallFunction(context.Background(), "greet", value.Utf8("World"))
 	if err != nil {
 		log.Fatal(err)
 	}

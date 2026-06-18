@@ -84,7 +84,7 @@ func (t *implValueServer) Bind() (err error) {
 		// stream transport and supersedes keep-alive (cover traffic keeps it live).
 		lis, err = obfsListener(listenAddr, t.Obfs.ObfsPolicy(), writeTimeout)
 	default:
-		lis, err = valuerpc.NewListener(listenAddr, keepAlive, writeTimeout)
+		lis, err = valuerpc.NewListener(listenAddr, keepAlive, writeTimeout, valuerpc.MaxFrameSize)
 	}
 	if err != nil {
 		return fmt.Errorf("can not bind to '%s': %w", listenAddr, err)
