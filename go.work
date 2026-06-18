@@ -4,6 +4,7 @@ use (
 	.
 	../obfs
 	../value-rpc
+	../value-rpc/resilience
 	./grpc
 	./vrpc
 )

@@ -43,6 +43,9 @@ opened, the server created and all `ValueService` beans registered in `Bind()`.
 - `ValueService` — a bean that calls `srv.AddFunction` / `AddOutgoingStream` /
   `AddIncomingStream` / `AddChat` in `RegisterValue`.
 - `ConnectAuthorizer` — optional bean called before each handshake.
+- `ResiliencePolicy` — optional bean of client interceptors (retry, circuit
+  breaking, …) installed on a `ValueClientFactory` client; build it with
+  `ResiliencePolicyFactory(beanName)` (property-driven) or `StaticResiliencePolicy`.
 
 ## Properties
 
@@ -54,6 +57,7 @@ opened, the server created and all `ValueService` beans registered in `Bind()`.
 | `<client>.connect-address` | client | target address (else derived from the matching server) |
 | `<client>.socks5` | client | optional SOCKS5 proxy `host:port` (TCP only) |
 | `<client>.timeout-ms` | client | per-call timeout in milliseconds |
+| `<client>.resilience.*` | client | service-governance policy (see below), via `ResiliencePolicyFactory` |
 
 ## Obfuscation (censorship resistance)
 
@@ -81,6 +85,44 @@ For deployments behind network censorship, vRPC connections can be wrapped with
   pion) stay in your app and **never enter servion/vrpc**. The `Transport` doc
   comment has a copy-paste `obfs/reality` implementation; for `reality`, point its
   fallback at servion's own HTTP server so an active probe sees a genuine site.
+
+## Resilience (service governance)
+
+Client-side service governance — retry, circuit breaking, timeouts, rate limiting,
+bulkheading, fallback — comes from the
+[value-rpc/resilience](https://go.arpabet.com/value-rpc/resilience) module, which
+implements each policy as a value-rpc client interceptor. servion only **wires**
+them (it implements no governance logic itself): a `ResiliencePolicy` bean in the
+client context is installed on the `ValueClientFactory` client via
+`valueclient.WithInterceptors`.
+
+Configure a policy from properties with `ResiliencePolicyFactory` (use the client's
+bean name) — only the properties you set contribute an interceptor:
+
+```go
+glue.New(
+    glue.MapPropertySource{
+        "value-client.connect-address":                     "127.0.0.1:9000",
+        "value-client.resilience.circuit-breaker.threshold": "5",
+        "value-client.resilience.retry.max-attempts":        "3",
+        "value-client.resilience.timeout-ms":                "2000",
+    },
+    servionvrpc.ResiliencePolicyFactory("value-client"),
+    servionvrpc.ValueClientFactory("value-client"),
+)
+```
+
+| Property (under `<client>.resilience.`) | Enables / meaning |
+|---|---|
+| `rate-limit.per-second` (+ `rate-limit.burst`) | `RateLimit` — shed load over the rate |
+| `bulkhead.max-concurrent` | `Bulkhead` — cap concurrent in-flight calls |
+| `circuit-breaker.threshold` (+ `circuit-breaker.cooldown-ms`) | `CircuitBreaker` — stop hammering an unhealthy peer |
+| `retry.max-attempts` (+ `retry.backoff-ms`, `retry.max-backoff-ms`) | `Retry` — re-issue transient failures |
+| `timeout-ms` | `Timeout` — bound each attempt |
+
+Order (outermost first): rate limit → bulkhead → circuit breaker → retry → timeout.
+For full control, build interceptors directly from the resilience package and wrap
+them with `StaticResiliencePolicy(...)`.
 
 ## Example
 

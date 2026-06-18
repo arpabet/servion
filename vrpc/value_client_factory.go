@@ -17,10 +17,11 @@ import (
 )
 
 type implValueClientFactory struct {
-	Log        *zap.Logger     `inject:""`
-	Properties glue.Properties `inject:""`
-	Obfs       ObfsProfile     `inject:"optional"`
-	Transport  Transport       `inject:"optional"`
+	Log        *zap.Logger      `inject:""`
+	Properties glue.Properties  `inject:""`
+	Obfs       ObfsProfile      `inject:"optional"`
+	Transport  Transport        `inject:"optional"`
+	Resilience ResiliencePolicy `inject:"optional"`
 
 	beanName string
 }
@@ -63,11 +64,22 @@ func (t *implValueClientFactory) Object() (object interface{}, err error) {
 
 	socks5 := t.Properties.GetString(fmt.Sprintf("%s.socks5", t.beanName), "")
 
+	// Service-governance interceptors (retry, circuit breaking, ...) are wired here
+	// from an optional ResiliencePolicy bean; the policy itself comes from the
+	// value-rpc/resilience module, servion only installs it.
+	var opts []valueclient.ClientOption
+	if t.Resilience != nil {
+		if ics := t.Resilience.Interceptors(); len(ics) > 0 {
+			opts = append(opts, valueclient.WithInterceptors(ics...))
+		}
+	}
+
 	t.Log.Info("ValueClientFactory",
 		zap.String("bean", t.beanName),
 		zap.String("connectAddr", connectAddr),
 		zap.Bool("obfs", t.Obfs != nil),
-		zap.Bool("transport", t.Transport != nil))
+		zap.Bool("transport", t.Transport != nil),
+		zap.Bool("resilience", len(opts) > 0))
 
 	var cli valueclient.Client
 	switch {
@@ -77,7 +89,7 @@ func (t *implValueClientFactory) Object() (object interface{}, err error) {
 		if derr != nil {
 			return nil, derr
 		}
-		cli = valueclient.NewClientWithDialer(dialer)
+		cli = valueclient.NewClientWithDialer(dialer, opts...)
 	case t.Obfs != nil:
 		// Obfuscation dials and shapes the connection itself, so socks5 (which
 		// would proxy the dial) does not compose with it and is ignored.
@@ -85,9 +97,9 @@ func (t *implValueClientFactory) Object() (object interface{}, err error) {
 		if derr != nil {
 			return nil, derr
 		}
-		cli = valueclient.NewClientWithDialer(dialer)
+		cli = valueclient.NewClientWithDialer(dialer, opts...)
 	default:
-		cli = valueclient.NewClient(connectAddr, socks5)
+		cli = valueclient.NewClient(connectAddr, socks5, opts...)
 	}
 
 	if timeoutMls := t.Properties.GetInt(fmt.Sprintf("%s.timeout-ms", t.beanName), 0); timeoutMls > 0 {

@@ -9,6 +9,7 @@ require (
 	go.arpabet.com/servion v1.3.0
 	go.arpabet.com/value v1.2.0
 	go.arpabet.com/value-rpc v1.3.0
+	go.arpabet.com/value-rpc/resilience v1.3.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.28.0
 )
@@ -24,6 +25,11 @@ replace go.arpabet.com/obfs => ../../obfs
 // the sibling working tree until a new release is tagged, then bump the require
 // above and drop this replace.
 replace go.arpabet.com/value-rpc => ../../value-rpc
+
+// The resilience module (service-governance interceptors) is a value-rpc submodule
+// that is not yet tagged. Resolve it from the sibling working tree until it is
+// released, then pin the require above and drop this replace.
+replace go.arpabet.com/value-rpc/resilience => ../../value-rpc/resilience
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
