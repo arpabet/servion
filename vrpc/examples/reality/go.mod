@@ -32,6 +32,7 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	go.arpabet.com/cligo v0.3.0 // indirect
 	go.arpabet.com/obfs v0.1.0 // indirect
+	go.arpabet.com/value-rpc/resilience v1.3.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.28.0 // indirect
@@ -49,6 +50,8 @@ require (
 replace go.arpabet.com/servion/vrpc => ../../
 
 replace go.arpabet.com/value-rpc => ../../../../value-rpc
+
+replace go.arpabet.com/value-rpc/resilience => ../../../../value-rpc/resilience
 
 replace go.arpabet.com/obfs => ../../../../obfs
 
