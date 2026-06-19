@@ -1,4 +1,4 @@
-module go.arpabet.com/servion/examples/servion-vue-example
+module go.arpabet.com/servion/examples/vue_server
 
 go 1.25.0
 
