@@ -3,7 +3,7 @@ module go.arpabet.com/servion/vrpc
 go 1.25.0
 
 require (
-	go.arpabet.com/cligo v0.3.0
+	go.arpabet.com/cligo v0.4.0
 	go.arpabet.com/glue v1.5.0
 	go.arpabet.com/obfs v0.2.1
 	go.arpabet.com/servion v1.3.2

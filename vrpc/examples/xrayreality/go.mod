@@ -6,7 +6,7 @@ require (
 	github.com/xtls/reality v0.0.0-20260322125925-9234c772ba8f
 	go.arpabet.com/glue v1.5.0
 	go.arpabet.com/obfs/xrayreality v0.2.1
-	go.arpabet.com/servion v1.3.0
+	go.arpabet.com/servion v1.3.2
 	go.arpabet.com/servion/vrpc v0.0.0-00010101000000-000000000000
 	go.arpabet.com/value v1.2.0
 	go.arpabet.com/value-rpc v1.4.2
@@ -33,7 +33,7 @@ require (
 	github.com/refraction-networking/utls v1.8.3-0.20260301010127-aa6edf4b11af // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	go.arpabet.com/cligo v0.3.0 // indirect
+	go.arpabet.com/cligo v0.4.0 // indirect
 	go.arpabet.com/obfs v0.2.1 // indirect
 	go.arpabet.com/value-rpc/resilience v1.4.2 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
