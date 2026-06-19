@@ -1,5 +1,7 @@
 # Servion
 
+[![Servion CI](https://github.com/arpabet/servion/actions/workflows/build.yaml/badge.svg)](https://github.com/arpabet/servion/actions/workflows/build.yaml)
+
 **All-in-one Go framework for building production-grade web services with built-in CLI, dependency injection, and HTTP server.**
 
 Servion combines what typically requires three separate libraries — a CLI framework, a DI container, and an HTTP server — into a single, cohesive package. Define your beans, wire your dependencies, and launch production-ready servers in under 20 lines of Go.
@@ -721,6 +723,26 @@ The core module depends on none of the gRPC or value-rpc packages. gRPC and
 [grpc-go](https://google.golang.org/grpc) are required only by the optional
 `go.arpabet.com/servion/grpc` submodule; [value-rpc](https://go.arpabet.com/value-rpc)
 only by `go.arpabet.com/servion/vrpc`. Each submodule has its own `go.mod`.
+
+## Continuous Integration
+
+CI runs on GitHub Actions ([`.github/workflows/build.yaml`](.github/workflows/build.yaml),
+workflow **Servion CI**). It triggers on every push and pull request to `main`, and
+can be started on demand from the Actions tab ("Run workflow") or the CLI:
+
+```bash
+gh workflow run "Servion CI"
+```
+
+The job checks out the repo, sets up Go 1.25, and runs `make` — which vets, tests
+(`go test -cover -race`), and builds all three modules (root, `grpc`, `vrpc`):
+
+```bash
+make          # vet -> test (race + cover) -> build, across ./, ./grpc, ./vrpc
+```
+
+`GOPRIVATE=go.arpabet.com/*` keeps the `go.arpabet.com` modules off the public Go
+module proxy and checksum database, so they are fetched directly from source.
 
 ## License
 
