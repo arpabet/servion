@@ -19,12 +19,13 @@ import (
 )
 
 type implValueServer struct {
-	Log        *zap.Logger       `inject:""`
-	Properties glue.Properties   `inject:""`
-	Services   []ValueService    `inject:"optional,level=1"`
-	Authorizer ConnectAuthorizer `inject:"optional"`
-	Obfs       ObfsProfile       `inject:"optional"`
-	Transport  Transport         `inject:"optional"`
+	Log           *zap.Logger       `inject:""`
+	Properties    glue.Properties   `inject:""`
+	Services      []ValueService    `inject:"optional,level=1"`
+	Authorizer    ConnectAuthorizer `inject:"optional"`
+	Authenticator Authenticator     `inject:"optional"`
+	Obfs          ObfsProfile       `inject:"optional"`
+	Transport     Transport         `inject:"optional"`
 
 	beanName string
 
@@ -101,6 +102,10 @@ func (t *implValueServer) Bind() (err error) {
 		srv.SetConnectAuthorizer(t.Authorizer.AuthorizeConnect)
 	}
 
+	if t.Authenticator != nil {
+		srv.SetAuthenticator(t.Authenticator.Authenticate)
+	}
+
 	for _, svc := range t.Services {
 		if err := svc.RegisterFunctions(srv); err != nil {
 			return fmt.Errorf("registering value service %T: %w", svc, err)
@@ -112,6 +117,7 @@ func (t *implValueServer) Bind() (err error) {
 		zap.String("addr", srv.Addr().String()),
 		zap.Int("services", len(t.Services)),
 		zap.Bool("authorizer", t.Authorizer != nil),
+		zap.Bool("authenticator", t.Authenticator != nil),
 		zap.Bool("obfs", t.Obfs != nil),
 		zap.Bool("transport", t.Transport != nil))
 

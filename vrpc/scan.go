@@ -19,7 +19,8 @@ type valueServerScanner struct {
 /*
 ValueServerScanner registers a value-rpc server named beanName (as a
 servion.Server that binds and serves it) and forwards the extra beans — the
-ValueService implementations and an optional ConnectAuthorizer. It is the vRPC
+ValueService implementations and optional ConnectAuthorizer / Authenticator
+beans (one bean may implement several of these). It is the vRPC
 counterpart of servion.HttpServerScanner / serviongrpc.GrpcServerScanner and is
 passed to servion.RunCommand.
 

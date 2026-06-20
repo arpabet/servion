@@ -6,9 +6,9 @@ require (
 	go.arpabet.com/glue v1.5.0
 	go.arpabet.com/obfs v0.2.1
 	go.arpabet.com/obfs/xreality v0.2.1
-	go.arpabet.com/servion v1.4.0
+	go.arpabet.com/servion v1.4.2
 	go.arpabet.com/servion/vrpc v1.4.0
-	go.arpabet.com/value v1.2.0
+	go.arpabet.com/value v1.2.1
 	go.arpabet.com/value-rpc v1.4.3
 )
 

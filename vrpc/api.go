@@ -17,6 +17,7 @@ package servionvrpc
 import (
 	"reflect"
 
+	"go.arpabet.com/value"
 	"go.arpabet.com/value-rpc/valueclient"
 	"go.arpabet.com/value-rpc/valuerpc"
 	"go.arpabet.com/value-rpc/valueserver"
@@ -58,6 +59,26 @@ type ConnectAuthorizer interface {
 
 	// AuthorizeConnect returns a non-nil error to reject and close the connection.
 	AuthorizeConnect(conn valuerpc.MsgConn) error
+}
+
+var AuthenticatorClass = reflect.TypeOf((*Authenticator)(nil)).Elem()
+
+/*
+Authenticator is an optional bean that validates the credential a client attaches
+to the vRPC handshake (Client.SetCredential) and derives the authenticated
+principal bound to the connection. If a bean implementing it is present in the
+server context it is installed via Server.SetAuthenticator. The principal is
+readable in handlers via valuerpc.PrincipalFromContext and binds session
+resumption (a reconnect that authenticates as a different principal is rejected).
+This is the handshake-credential seam (bearer token, signed identity) — the
+counterpart of ConnectAuthorizer's pre-handshake, connection-level check.
+*/
+type Authenticator interface {
+
+	// Authenticate validates credential (value.Null when none was sent) and
+	// returns the authenticated principal identity ("" for anonymous), or a
+	// non-nil error to reject the connection.
+	Authenticate(conn valuerpc.MsgConn, credential value.Value) (principal string, err error)
 }
 
 // ValueClientClass is the reflect.Type of valueclient.Client, produced by
