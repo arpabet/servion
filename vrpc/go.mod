@@ -8,8 +8,8 @@ require (
 	go.arpabet.com/obfs v0.2.1
 	go.arpabet.com/servion v1.4.0
 	go.arpabet.com/value v1.2.0
-	go.arpabet.com/value-rpc v1.4.2
-	go.arpabet.com/value-rpc/resilience v1.4.2
+	go.arpabet.com/value-rpc v1.4.3
+	go.arpabet.com/value-rpc/resilience v1.4.3
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.28.0
 )
