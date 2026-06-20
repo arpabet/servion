@@ -5,7 +5,7 @@ go 1.25.8
 require (
 	go.arpabet.com/cligo v0.4.0
 	go.arpabet.com/glue v1.5.0
-	go.arpabet.com/servion v1.4.1
+	go.arpabet.com/servion v1.4.2
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.28.0
 	google.golang.org/grpc v1.81.1
