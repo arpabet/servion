@@ -44,7 +44,7 @@ type flakyService struct {
 	calls int64
 }
 
-func (t *flakyService) RegisterValue(srv valueserver.Server) error {
+func (t *flakyService) RegisterFunctions(srv valueserver.Server) error {
 	return srv.AddFunction("fetch", valuerpc.String, valuerpc.String, t.fetch)
 }
 

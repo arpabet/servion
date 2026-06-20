@@ -45,7 +45,7 @@ func (tcpTransport) Dialer(addr string, wt time.Duration) (valuerpc.Dialer, erro
 
 type tpGreeter struct{}
 
-func (tpGreeter) RegisterValue(srv valueserver.Server) error {
+func (tpGreeter) RegisterFunctions(srv valueserver.Server) error {
 	return srv.AddFunction("greet", valuerpc.String, valuerpc.String, func(ctx context.Context, args value.Value) (value.Value, error) {
 		return value.Utf8("Hi, " + args.String() + "!"), nil
 	})

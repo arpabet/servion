@@ -61,7 +61,7 @@ type flakyService struct {
 	attempts *int32
 }
 
-func (s *flakyService) RegisterValue(srv valueserver.Server) error {
+func (s *flakyService) RegisterFunctions(srv valueserver.Server) error {
 	return srv.AddFunction("flaky", valuerpc.Any, valuerpc.Any,
 		func(_ context.Context, _ value.Value) (value.Value, error) {
 			if atomic.AddInt32(s.attempts, 1) < 3 {

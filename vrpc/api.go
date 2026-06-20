@@ -34,15 +34,15 @@ server factory collects serviongrpc.GrpcService beans.
 		Log *zap.Logger `inject:""`
 	}
 
-	func (t *greeterService) RegisterValue(srv valueserver.Server) error {
+	func (t *greeterService) RegisterFunctions(srv valueserver.Server) error {
 		return srv.AddFunction("greet", valuerpc.String, valuerpc.String, t.greet)
 	}
 */
 type ValueService interface {
 
-	// RegisterValue registers functions and streams on srv (AddFunction,
+	// RegisterFunctions registers functions and streams on srv (AddFunction,
 	// AddOutgoingStream, AddIncomingStream, AddChat).
-	RegisterValue(srv valueserver.Server) error
+	RegisterFunctions(srv valueserver.Server) error
 }
 
 var ConnectAuthorizerClass = reflect.TypeOf((*ConnectAuthorizer)(nil)).Elem()

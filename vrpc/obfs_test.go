@@ -20,7 +20,7 @@ import (
 
 type obfsGreeter struct{}
 
-func (obfsGreeter) RegisterValue(srv valueserver.Server) error {
+func (obfsGreeter) RegisterFunctions(srv valueserver.Server) error {
 	return srv.AddFunction("greet", valuerpc.String, valuerpc.String, func(ctx context.Context, args value.Value) (value.Value, error) {
 		return value.Utf8("Hello, " + args.String() + "!"), nil
 	})

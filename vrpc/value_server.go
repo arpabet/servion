@@ -102,7 +102,7 @@ func (t *implValueServer) Bind() (err error) {
 	}
 
 	for _, svc := range t.Services {
-		if err := svc.RegisterValue(srv); err != nil {
+		if err := svc.RegisterFunctions(srv); err != nil {
 			return fmt.Errorf("registering value service %T: %w", svc, err)
 		}
 	}

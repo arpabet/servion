@@ -21,7 +21,7 @@ import (
 // greeterService is a ValueService bean that serves one unary function.
 type greeterService struct{}
 
-func (t *greeterService) RegisterValue(srv valueserver.Server) error {
+func (t *greeterService) RegisterFunctions(srv valueserver.Server) error {
 	return srv.AddFunction("greet", valuerpc.String, valuerpc.String, t.greet)
 }
 
