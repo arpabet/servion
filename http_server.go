@@ -7,7 +7,6 @@ package servion
 
 import (
 	"crypto/tls"
-	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -15,6 +14,7 @@ import (
 
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+	"golang.org/x/xerrors"
 )
 
 type implHttpServer struct {
@@ -41,7 +41,7 @@ func (t *implHttpServer) Bind() (err error) {
 
 	t.listener, err = net.Listen("tcp", t.srv.Addr)
 	if err != nil {
-		return fmt.Errorf("can not bind to port '%s': %w", t.srv.Addr, err)
+		return xerrors.Errorf("can not bind to port '%s': %w", t.srv.Addr, err)
 	}
 
 	return nil

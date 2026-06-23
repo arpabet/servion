@@ -7,7 +7,6 @@ package servionvrpc_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	servionvrpc "go.arpabet.com/servion/vrpc"
@@ -15,6 +14,7 @@ import (
 	"go.arpabet.com/value-rpc/valueclient"
 	"go.arpabet.com/value-rpc/valuerpc"
 	"go.arpabet.com/value-rpc/valueserver"
+	"golang.org/x/xerrors"
 )
 
 // authService is both a ValueService and an Authenticator bean: glue injects the
@@ -31,12 +31,12 @@ func (t *authService) RegisterFunctions(srv valueserver.Server) error {
 
 func (t *authService) Authenticate(_ valuerpc.MsgConn, cred value.Value) (string, error) {
 	if cred == nil || cred.Kind() != value.STRING {
-		return "", fmt.Errorf("missing credential")
+		return "", xerrors.New("missing credential")
 	}
 	if cred.(value.String).Utf8() == "alice-token" {
 		return "alice", nil
 	}
-	return "", fmt.Errorf("invalid token")
+	return "", xerrors.New("invalid token")
 }
 
 func TestValueServer_Authenticator(t *testing.T) {

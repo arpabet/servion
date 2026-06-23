@@ -7,8 +7,6 @@ package servion
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,11 +17,12 @@ import (
 	"go.arpabet.com/glue"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/xerrors"
 )
 
 func PanicToError(err *error) {
 	if r := recover(); r != nil {
-		*err = fmt.Errorf("%v, %s", r, debug.Stack())
+		*err = xerrors.Errorf("%v, %s", r, debug.Stack())
 	}
 }
 
@@ -76,7 +75,7 @@ func doWithServers(core glue.Container, cb func([]Server) error) (err error) {
 
 		var listErr []error
 		if r := recover(); r != nil {
-			listErr = append(listErr, fmt.Errorf("recovered on error: %v", r))
+			listErr = append(listErr, xerrors.Errorf("recovered on error: %v", r))
 		}
 
 		for _, ctx := range childList {
@@ -88,7 +87,7 @@ func doWithServers(core glue.Container, cb func([]Server) error) (err error) {
 		}
 
 		if len(listErr) > 0 {
-			err = fmt.Errorf("%v", listErr)
+			err = xerrors.Errorf("%v", listErr)
 		}
 
 	}()
@@ -100,7 +99,7 @@ func doWithServers(core glue.Container, cb func([]Server) error) (err error) {
 		for _, child := range core.Children() {
 			// Initialize child context, by default they are not initialized
 			if ctx, err := child.Object(); err != nil {
-				return fmt.Errorf("server creation context '%v' failed: %w", child, err)
+				return xerrors.Errorf("server creation context '%v' failed: %w", child, err)
 			} else {
 				childList = append(childList, ctx)
 			}
@@ -114,7 +113,7 @@ func doWithServers(core glue.Container, cb func([]Server) error) (err error) {
 			if srv, ok := bean.Object().(Server); ok {
 				serverList = append(serverList, srv)
 			} else {
-				return fmt.Errorf("invalid object found for servionapi.Server on position %d in child context: %v", i, ctx)
+				return xerrors.Errorf("invalid object found for servionapi.Server on position %d in child context: %v", i, ctx)
 			}
 		}
 
@@ -122,11 +121,11 @@ func doWithServers(core glue.Container, cb func([]Server) error) (err error) {
 			if srv, ok := bean.Object().(*http.Server); ok {
 				s := NewHttpServer(srv)
 				if err := ctx.Inject(s); err != nil {
-					return fmt.Errorf("injection error for server '%s' of *http.Server on position %d in child context %v: %w", srv.Addr, i, ctx, err)
+					return xerrors.Errorf("injection error for server '%s' of *http.Server on position %d in child context %v: %w", srv.Addr, i, ctx, err)
 				}
 				serverList = append(serverList, s)
 			} else {
-				return fmt.Errorf("invalid object found for *http.Server on position %d in child context %v", i, ctx)
+				return xerrors.Errorf("invalid object found for *http.Server on position %d in child context %v", i, ctx)
 			}
 		}
 
@@ -143,7 +142,7 @@ func runServers(runtime Runtime, core glue.Container, log *zap.Logger) error {
 		defer log.Sync()
 
 		if len(servers) == 0 {
-			return errors.New("servionapi.Server instances are not found in server context")
+			return xerrors.New("servionapi.Server instances are not found in server context")
 		}
 
 		c, cancel := context.WithCancel(runtime)

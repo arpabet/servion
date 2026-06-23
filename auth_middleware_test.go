@@ -1,10 +1,11 @@
 package servion
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"golang.org/x/xerrors"
 )
 
 func TestAuthMiddleware_ValidToken(t *testing.T) {
@@ -176,7 +177,7 @@ func TestAuthMiddleware_InternalError(t *testing.T) {
 		Prefixes:  []string{"/api"},
 		Authenticator: &mockAuthenticator{
 			authFunc: func(token string) (AuthInfo, error) {
-				return AuthInfo{}, errors.New("database connection failed")
+				return AuthInfo{}, xerrors.New("database connection failed")
 			},
 		},
 	}

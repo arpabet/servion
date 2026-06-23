@@ -9,10 +9,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/base64"
-	"fmt"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/xerrors"
 )
 
 type implJwtAuthProvider struct {
@@ -55,37 +55,37 @@ func JwtAuthProvider() Authenticator {
 
 func (t *implJwtAuthProvider) PostConstruct() error {
 	if t.Secret == "" && t.PublicKeyB64 == "" {
-		return fmt.Errorf("jwt: either jwt.secret or jwt.public-key must be configured")
+		return xerrors.New("jwt: either jwt.secret or jwt.public-key must be configured")
 	}
 
 	if t.Secret != "" && t.PublicKeyB64 != "" {
-		return fmt.Errorf("jwt: jwt.secret and jwt.public-key are mutually exclusive")
+		return xerrors.New("jwt: jwt.secret and jwt.public-key are mutually exclusive")
 	}
 
 	if t.PublicKeyB64 != "" {
 		der, err := base64.StdEncoding.DecodeString(t.PublicKeyB64)
 		if err != nil {
-			return fmt.Errorf("jwt: failed to base64-decode jwt.public-key: %w", err)
+			return xerrors.Errorf("jwt: failed to base64-decode jwt.public-key: %w", err)
 		}
 		pub, err := x509.ParsePKIXPublicKey(der)
 		if err != nil {
-			return fmt.Errorf("jwt: failed to parse public key: %w", err)
+			return xerrors.Errorf("jwt: failed to parse public key: %w", err)
 		}
 		ecPub, ok := pub.(*ecdsa.PublicKey)
 		if !ok {
-			return fmt.Errorf("jwt: public key is not ECDSA, got %T", pub)
+			return xerrors.Errorf("jwt: public key is not ECDSA, got %T", pub)
 		}
 		t.ecdsaPub = ecPub
 		t.keyFunc = func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
-				return nil, fmt.Errorf("jwt: unexpected signing method %v", token.Header["alg"])
+				return nil, xerrors.Errorf("jwt: unexpected signing method %v", token.Header["alg"])
 			}
 			return t.ecdsaPub, nil
 		}
 	} else {
 		t.keyFunc = func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("jwt: unexpected signing method %v", token.Header["alg"])
+				return nil, xerrors.Errorf("jwt: unexpected signing method %v", token.Header["alg"])
 			}
 			return []byte(t.Secret), nil
 		}

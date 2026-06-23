@@ -7,7 +7,6 @@ package servionvrpc
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net"
 	"reflect"
@@ -15,6 +14,7 @@ import (
 
 	"go.arpabet.com/obfs"
 	"go.arpabet.com/value-rpc/valuerpc"
+	"golang.org/x/xerrors"
 )
 
 // ObfsProfileClass is the reflect.Type of ObfsProfile, used for bean lookup.
@@ -147,6 +147,6 @@ func streamNetwork(address string) (network, addr string, err error) {
 	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
 		return network, addr, nil
 	default:
-		return "", "", fmt.Errorf("obfs shaping requires a stream transport (tcp:// or unix://), not %q", network)
+		return "", "", xerrors.Errorf("obfs shaping requires a stream transport (tcp:// or unix://), not %q", network)
 	}
 }

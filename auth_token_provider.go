@@ -3,8 +3,9 @@ package servion
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"strings"
+
+	"golang.org/x/xerrors"
 )
 
 type implAuthTokenProvider struct {
@@ -23,7 +24,7 @@ func (t *implAuthTokenProvider) PostConstruct() error {
 		token = strings.TrimSpace(token)
 		if token != "" {
 			if strings.Contains(token, ",") {
-				return fmt.Errorf("token must not contain comma")
+				return xerrors.New("token must not contain comma")
 			}
 
 			hashedToken := hashToken(token)

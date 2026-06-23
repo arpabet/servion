@@ -17,6 +17,7 @@ import (
 	"github.com/gorilla/mux"
 	"go.arpabet.com/glue"
 	"go.uber.org/zap"
+	"golang.org/x/xerrors"
 )
 
 type implHttpServerFactory struct {
@@ -54,7 +55,7 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 	listenAddr := t.Properties.GetString(fmt.Sprintf("%s.%s", t.beanName, "bind-address"), "")
 
 	if listenAddr == "" {
-		return nil, fmt.Errorf("property '%s.bind-address' not found in server context", t.beanName)
+		return nil, xerrors.Errorf("property '%s.bind-address' not found in server context", t.beanName)
 	}
 
 	options := ParseOptions(t.Properties.GetString(fmt.Sprintf("%s.%s", t.beanName, "options"), ""))

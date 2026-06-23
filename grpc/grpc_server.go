@@ -17,6 +17,7 @@ import (
 	"go.arpabet.com/servion"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 )
 
@@ -65,25 +66,25 @@ func (t *implGrpcServer) PostConstruct() error {
 		if b.Name() == t.beanName {
 			srv, ok := b.Object().(*grpc.Server)
 			if !ok {
-				return fmt.Errorf("bean '%s' is not a *grpc.Server", t.beanName)
+				return xerrors.Errorf("bean '%s' is not a *grpc.Server", t.beanName)
 			}
 			t.srv = srv
 			return nil
 		}
 	}
-	return fmt.Errorf("grpc.Server bean '%s' not found in server context", t.beanName)
+	return xerrors.Errorf("grpc.Server bean '%s' not found in server context", t.beanName)
 }
 
 func (t *implGrpcServer) Bind() (err error) {
 
 	t.listenAddr = t.Properties.GetString(fmt.Sprintf("%s.bind-address", t.beanName), "")
 	if t.listenAddr == "" {
-		return fmt.Errorf("property '%s.bind-address' not found in server context", t.beanName)
+		return xerrors.Errorf("property '%s.bind-address' not found in server context", t.beanName)
 	}
 
 	t.listener, err = net.Listen("tcp", t.listenAddr)
 	if err != nil {
-		return fmt.Errorf("can not bind to '%s': %w", t.listenAddr, err)
+		return xerrors.Errorf("can not bind to '%s': %w", t.listenAddr, err)
 	}
 
 	if t.TlsConfig != nil {

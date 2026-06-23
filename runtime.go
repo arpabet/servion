@@ -6,8 +6,6 @@
 package servion
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -15,6 +13,7 @@ import (
 
 	"go.arpabet.com/cligo"
 	"go.uber.org/atomic"
+	"golang.org/x/xerrors"
 )
 
 type implRuntime struct {
@@ -62,7 +61,7 @@ func (t *implRuntime) PostConstruct() (err error) {
 
 	absHomeDir, err := filepath.Abs(t.homeDir)
 	if err != nil {
-		return fmt.Errorf("failed to get abs home directory: %s: %w", t.homeDir, err)
+		return xerrors.Errorf("failed to get abs home directory: %s: %w", t.homeDir, err)
 	}
 	t.homeDir = absHomeDir
 
@@ -97,7 +96,7 @@ func (t *implRuntime) Shutdown(restart bool) {
 	t.shutdownOnce.Do(func() {
 		t.restarting.Store(restart)
 		t.shuttingDown.Store(true)
-		t.runtimeErr.Store(errors.New("closed"))
+		t.runtimeErr.Store(xerrors.New("closed"))
 		close(t.shutdownCh)
 	})
 }

@@ -7,11 +7,11 @@ package servion
 
 import (
 	"context"
-	"fmt"
 
 	"go.arpabet.com/cligo"
 	"go.arpabet.com/glue"
 	"go.uber.org/zap"
+	"golang.org/x/xerrors"
 )
 
 type implRunCommand struct {
@@ -53,7 +53,7 @@ runItAgain:
 	if len(zapBeans) == 0 {
 		logger, err = zap.NewDevelopment()
 		if err != nil {
-			return fmt.Errorf("failed to initialize zap logger: %w", err)
+			return xerrors.Errorf("failed to initialize zap logger: %w", err)
 		}
 		beans = append(beans, logger)
 	} else {
@@ -62,7 +62,7 @@ runItAgain:
 
 	child, err := t.Container.Extend(beans...)
 	if err != nil {
-		return fmt.Errorf("failed to initialize '%s' command scope context: %w", t.Command(), err)
+		return xerrors.Errorf("failed to initialize '%s' command scope context: %w", t.Command(), err)
 	}
 
 	err = runServers(runtime, child, logger)

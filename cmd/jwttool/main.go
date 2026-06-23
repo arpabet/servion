@@ -19,6 +19,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	flag "github.com/spf13/pflag"
+	"golang.org/x/xerrors"
 )
 
 func main() {
@@ -243,15 +244,15 @@ Examples:
 func signECDSA(privB64 string, claims jwt.MapClaims) (string, error) {
 	der, err := base64.StdEncoding.DecodeString(privB64)
 	if err != nil {
-		return "", fmt.Errorf("base64 decode private key: %w", err)
+		return "", xerrors.Errorf("base64 decode private key: %w", err)
 	}
 	key, err := x509.ParsePKCS8PrivateKey(der)
 	if err != nil {
-		return "", fmt.Errorf("parse private key: %w", err)
+		return "", xerrors.Errorf("parse private key: %w", err)
 	}
 	ecKey, ok := key.(*ecdsa.PrivateKey)
 	if !ok {
-		return "", fmt.Errorf("key is not ECDSA, got %T", key)
+		return "", xerrors.Errorf("key is not ECDSA, got %T", key)
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
@@ -269,7 +270,7 @@ func parseDuration(s string) (time.Duration, error) {
 		s = strings.TrimSuffix(s, "d")
 		var days int
 		if _, err := fmt.Sscanf(s, "%d", &days); err != nil {
-			return 0, fmt.Errorf("invalid days: %s", s)
+			return 0, xerrors.Errorf("invalid days: %s", s)
 		}
 		return time.Duration(days) * 24 * time.Hour, nil
 	}

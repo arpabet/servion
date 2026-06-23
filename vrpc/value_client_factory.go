@@ -14,6 +14,7 @@ import (
 	"go.arpabet.com/servion"
 	"go.arpabet.com/value-rpc/valueclient"
 	"go.uber.org/zap"
+	"golang.org/x/xerrors"
 )
 
 type implValueClientFactory struct {
@@ -57,7 +58,7 @@ func (t *implValueClientFactory) Object() (object interface{}, err error) {
 		serverBean := strings.ReplaceAll(t.beanName, "client", "server")
 		bindAddr := t.Properties.GetString(fmt.Sprintf("%s.bind-address", serverBean), "")
 		if bindAddr == "" {
-			return nil, fmt.Errorf("neither property '%s.connect-address' nor '%s.bind-address' is found in context", t.beanName, serverBean)
+			return nil, xerrors.Errorf("neither property '%s.connect-address' nor '%s.bind-address' is found in context", t.beanName, serverBean)
 		}
 		connectAddr = localizeAddr(bindAddr)
 	}

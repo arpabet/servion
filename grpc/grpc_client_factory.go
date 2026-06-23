@@ -14,6 +14,7 @@ import (
 	"go.arpabet.com/glue"
 	"go.arpabet.com/servion"
 	"go.uber.org/zap"
+	"golang.org/x/xerrors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -59,7 +60,7 @@ func (t *implGrpcClientFactory) Object() (object interface{}, err error) {
 		serverBean := strings.ReplaceAll(t.beanName, "client", "server")
 		bindAddr := t.Properties.GetString(fmt.Sprintf("%s.bind-address", serverBean), "")
 		if bindAddr == "" {
-			return nil, fmt.Errorf("neither property '%s.connect-address' nor '%s.bind-address' is found in context", t.beanName, serverBean)
+			return nil, xerrors.Errorf("neither property '%s.connect-address' nor '%s.bind-address' is found in context", t.beanName, serverBean)
 		}
 		connectAddr = localizeAddr(bindAddr)
 	}

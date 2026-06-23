@@ -10,11 +10,12 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/prometheus/client_golang v1.23.2
 	github.com/spf13/pflag v1.0.10
-	go.arpabet.com/cligo v0.4.0
-	go.arpabet.com/glue v1.5.0
+	go.arpabet.com/cligo v0.5.0
+	go.arpabet.com/glue v1.5.1
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/sync v0.21.0
+	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da
 )
 
 require (
@@ -23,7 +24,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.68.1 // indirect
+	github.com/prometheus/common v0.69.0 // indirect
 	github.com/prometheus/procfs v0.20.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect

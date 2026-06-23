@@ -16,6 +16,7 @@ import (
 	"go.arpabet.com/value-rpc/valueserver"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+	"golang.org/x/xerrors"
 )
 
 type implValueServer struct {
@@ -68,7 +69,7 @@ func (t *implValueServer) Bind() (err error) {
 
 	listenAddr := t.Properties.GetString(fmt.Sprintf("%s.bind-address", t.beanName), "")
 	if listenAddr == "" {
-		return fmt.Errorf("property '%s.bind-address' not found in server context", t.beanName)
+		return xerrors.Errorf("property '%s.bind-address' not found in server context", t.beanName)
 	}
 
 	keepAlive := t.Properties.GetDuration(fmt.Sprintf("%s.keep-alive", t.beanName), valueserver.KeepAlivePeriod)
@@ -88,7 +89,7 @@ func (t *implValueServer) Bind() (err error) {
 		lis, err = valuerpc.NewListener(listenAddr, keepAlive, writeTimeout, valuerpc.MaxFrameSize)
 	}
 	if err != nil {
-		return fmt.Errorf("can not bind to '%s': %w", listenAddr, err)
+		return xerrors.Errorf("can not bind to '%s': %w", listenAddr, err)
 	}
 
 	srv, err := valueserver.NewServerWithListener(lis, t.Log)
@@ -108,7 +109,7 @@ func (t *implValueServer) Bind() (err error) {
 
 	for _, svc := range t.Services {
 		if err := svc.RegisterFunctions(srv); err != nil {
-			return fmt.Errorf("registering value service %T: %w", svc, err)
+			return xerrors.Errorf("registering value service %T: %w", svc, err)
 		}
 	}
 
@@ -140,7 +141,7 @@ func (t *implValueServer) Serve() (err error) {
 	defer servion.PanicToError(&err)
 
 	if t.srv == nil {
-		return fmt.Errorf("value server '%s' is not bound", t.beanName)
+		return xerrors.Errorf("value server '%s' is not bound", t.beanName)
 	}
 
 	addr := t.ListenAddress()

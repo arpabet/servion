@@ -8,13 +8,13 @@ package servion
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"net"
 	"net/http"
 	"reflect"
 
 	"go.arpabet.com/glue"
 	"go.uber.org/zap"
+	"golang.org/x/xerrors"
 )
 
 var (
@@ -215,8 +215,8 @@ func ContextWithAuth(ctx context.Context, info AuthInfo) context.Context {
 
 var AuthenticatorClass = reflect.TypeOf((*Authenticator)(nil)).Elem()
 
-var ErrUnauthorized = errors.New("invalid token")
-var ErrServiceUnavailable = errors.New("service unavailable")
+var ErrUnauthorized = xerrors.New("invalid token")
+var ErrServiceUnavailable = xerrors.New("service unavailable")
 
 type Authenticator interface {
 	// Authenticate validates token and returns auth info.
