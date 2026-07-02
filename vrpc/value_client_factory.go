@@ -13,6 +13,7 @@ import (
 	"go.arpabet.com/glue"
 	"go.arpabet.com/servion"
 	"go.arpabet.com/value-rpc/valueclient"
+	"go.arpabet.com/value-rpc/valuerpc"
 	"go.uber.org/zap"
 	"golang.org/x/xerrors"
 )
@@ -74,6 +75,10 @@ func (t *implValueClientFactory) Object() (object interface{}, err error) {
 			opts = append(opts, valueclient.WithInterceptors(ics...))
 		}
 	}
+	// Propagate per-call request metadata (trace context, baggage, and the depecher
+	// multiplexing account selector) from the call context onto the wire. Harmless
+	// when the call carries no metadata.
+	opts = append(opts, valueclient.WithMetadata(valuerpc.MetadataFromContext))
 
 	t.Log.Info("ValueClientFactory",
 		zap.String("bean", t.beanName),
