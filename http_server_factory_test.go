@@ -1,9 +1,15 @@
 package servion
 
 import (
+	"bytes"
+	"compress/gzip"
 	"crypto/tls"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -612,5 +618,210 @@ func TestHttpServerFactory_TLSWarning(t *testing.T) {
 	srv := obj.(*http.Server)
 	if srv.TLSConfig != nil {
 		t.Error("expected nil TLSConfig when no TlsConfig bean provided")
+	}
+}
+
+func newSpaTestFactory(t *testing.T, options string) *implHttpServerFactory {
+	t.Helper()
+
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte("<html>spa-index</html>"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "app.js"), []byte("console.log(1)"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	props := glue.NewProperties()
+	props.Set("test-server.bind-address", "127.0.0.1:0")
+	props.Set("test-server.options", options)
+
+	return &implHttpServerFactory{
+		Log:        zap.NewNop(),
+		Properties: props,
+		Resources: []*glue.ResourceSource{
+			{
+				Name:       "assets",
+				AssetNames: []string{"index.html", "app.js"},
+				AssetFiles: http.Dir(dir),
+			},
+		},
+		beanName: "test-server",
+	}
+}
+
+func serveSpaRequest(t *testing.T, f *implHttpServerFactory, method, target string, header http.Header) *httptest.ResponseRecorder {
+	t.Helper()
+
+	obj, err := f.Object()
+	if err != nil {
+		t.Fatalf("Object: %v", err)
+	}
+	srv := obj.(*http.Server)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(method, target, nil)
+	for k, v := range header {
+		req.Header[k] = v
+	}
+	srv.Handler.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestHttpServerFactory_SpaFallback_DeepLink(t *testing.T) {
+	f := newSpaTestFactory(t, "assets;spa")
+
+	rec := serveSpaRequest(t, f, http.MethodGet, "/crm/customers", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on deep link, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "spa-index") {
+		t.Errorf("expected index.html content, got %q", rec.Body.String())
+	}
+}
+
+func TestHttpServerFactory_SpaFallback_HeadDeepLink(t *testing.T) {
+	f := newSpaTestFactory(t, "assets;spa")
+
+	rec := serveSpaRequest(t, f, http.MethodHead, "/crm/customers", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on HEAD deep link, got %d", rec.Code)
+	}
+}
+
+func TestHttpServerFactory_SpaFallback_AssetsStillServed(t *testing.T) {
+	f := newSpaTestFactory(t, "assets;spa")
+
+	rec := serveSpaRequest(t, f, http.MethodGet, "/app.js", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for registered asset, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "console.log(1)") {
+		t.Errorf("expected app.js content, got %q", rec.Body.String())
+	}
+}
+
+func TestHttpServerFactory_SpaFallback_Disabled(t *testing.T) {
+	f := newSpaTestFactory(t, "assets")
+
+	rec := serveSpaRequest(t, f, http.MethodGet, "/crm/customers", nil)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 without spa option, got %d", rec.Code)
+	}
+}
+
+func TestHttpServerFactory_SpaFallback_DefaultExcludedPrefix(t *testing.T) {
+	f := newSpaTestFactory(t, "assets;spa")
+
+	rec := serveSpaRequest(t, f, http.MethodGet, "/api/v1/missing", nil)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for default excluded /api prefix, got %d", rec.Code)
+	}
+}
+
+func TestHttpServerFactory_SpaFallback_CustomExcludedPrefix(t *testing.T) {
+	f := newSpaTestFactory(t, "assets;spa")
+	f.Properties.Set("test-server.spa-exclude", "/api;/internal")
+
+	rec := serveSpaRequest(t, f, http.MethodGet, "/internal/missing", nil)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for custom excluded prefix, got %d", rec.Code)
+	}
+
+	rec = serveSpaRequest(t, f, http.MethodGet, "/crm/customers", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on non-excluded deep link, got %d", rec.Code)
+	}
+}
+
+func TestHttpServerFactory_SpaFallback_ExtensionNotFound(t *testing.T) {
+	f := newSpaTestFactory(t, "assets;spa")
+
+	rec := serveSpaRequest(t, f, http.MethodGet, "/missing.js", nil)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for missing asset with extension, got %d", rec.Code)
+	}
+}
+
+func TestHttpServerFactory_SpaFallback_PostNotFound(t *testing.T) {
+	f := newSpaTestFactory(t, "assets;spa")
+
+	rec := serveSpaRequest(t, f, http.MethodPost, "/crm/customers", nil)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for POST to unmatched path, got %d", rec.Code)
+	}
+}
+
+func TestHttpServerFactory_SpaFallback_WithoutIndexHtml(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "app.js"), []byte("console.log(1)"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	props := glue.NewProperties()
+	props.Set("test-server.bind-address", "127.0.0.1:0")
+	props.Set("test-server.options", "assets;spa")
+
+	f := &implHttpServerFactory{
+		Log:        zap.NewNop(),
+		Properties: props,
+		Resources: []*glue.ResourceSource{
+			{
+				Name:       "assets",
+				AssetNames: []string{"app.js"},
+				AssetFiles: http.Dir(dir),
+			},
+		},
+		beanName: "test-server",
+	}
+
+	rec := serveSpaRequest(t, f, http.MethodGet, "/crm/customers", nil)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 when spa enabled without index.html, got %d", rec.Code)
+	}
+}
+
+func TestHttpServerFactory_SpaFallback_GzipVariant(t *testing.T) {
+	f := newSpaTestFactory(t, "assets;spa")
+
+	gzDir := t.TempDir()
+	var buf bytes.Buffer
+	zw := gzip.NewWriter(&buf)
+	if _, err := zw.Write([]byte("<html>spa-index-gz</html>")); err != nil {
+		t.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(gzDir, "index.html"), buf.Bytes(), 0644); err != nil {
+		t.Fatal(err)
+	}
+	f.Resources = append(f.Resources, &glue.ResourceSource{
+		Name:       "assets-gzip",
+		AssetNames: []string{"index.html"},
+		AssetFiles: http.Dir(gzDir),
+	})
+
+	rec := serveSpaRequest(t, f, http.MethodGet, "/crm/customers", http.Header{
+		"Accept-Encoding": []string{"gzip"},
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on gzip deep link, got %d", rec.Code)
+	}
+	if got := rec.Header().Get("Content-Encoding"); got != "gzip" {
+		t.Fatalf("expected Content-Encoding gzip, got %q", got)
+	}
+
+	zr, err := gzip.NewReader(rec.Body)
+	if err != nil {
+		t.Fatalf("gzip.NewReader: %v", err)
+	}
+	defer zr.Close()
+	content, err := io.ReadAll(zr)
+	if err != nil {
+		t.Fatalf("read gzip body: %v", err)
+	}
+	if !strings.Contains(string(content), "spa-index-gz") {
+		t.Errorf("expected gzipped index content, got %q", string(content))
 	}
 }

@@ -38,6 +38,16 @@ func ParseOptions(str string) map[string]bool {
 	return cache
 }
 
+func ParsePrefixList(str string) []string {
+	var list []string
+	for _, part := range strings.Split(str, ";") {
+		if prefix := strings.TrimSpace(part); prefix != "" {
+			list = append(list, prefix)
+		}
+	}
+	return list
+}
+
 const (
 	acceptEncoding  = "Accept-Encoding"
 	contentEncoding = "Content-Encoding"

@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"path"
 	"reflect"
 	"sort"
 	"strings"
@@ -94,14 +95,28 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 	}
 
 	var assetList []string
+	var groupedAssets map[string]*servingAsset
+	if options["assets"] || options["spa"] {
+		groupedAssets = t.groupAssets()
+	}
+
 	if options["assets"] {
-		for pattern, handler := range t.groupAssets() {
+		for pattern, handler := range groupedAssets {
 			if visitedPatterns[pattern] {
 				t.Log.Warn("PatternExist", zap.String("pattern", pattern))
 			}
 			visitedPatterns[pattern] = true
 			assetList = append(assetList, pattern)
 			serveMux.Handle(pattern, handler)
+		}
+	}
+
+	if options["spa"] {
+		if index, ok := groupedAssets["/"]; ok {
+			exclude := ParsePrefixList(t.Properties.GetString(fmt.Sprintf("%s.%s", t.beanName, "spa-exclude"), "/api"))
+			serveMux.NotFoundHandler = &spaFallback{index: index, exclude: exclude}
+		} else {
+			t.Log.Warn("SpaIndexHtmlNotFound", zap.String("bean", t.beanName))
 		}
 	}
 
@@ -230,6 +245,38 @@ func (t *implHttpServerFactory) groupAssets() map[string]*servingAsset {
 	}
 
 	return cache
+}
+
+// spaFallback serves the embedded index.html for unmatched paths so that
+// single-page applications using history-mode routing can deep link.
+// Non-GET/HEAD requests, excluded prefixes, and paths with a file extension
+// still return 404.
+type spaFallback struct {
+	index   http.Handler
+	exclude []string
+}
+
+func (t *spaFallback) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.NotFound(w, r)
+		return
+	}
+	for _, prefix := range t.exclude {
+		if strings.HasPrefix(r.URL.Path, prefix) {
+			http.NotFound(w, r)
+			return
+		}
+	}
+	if path.Ext(r.URL.Path) != "" {
+		http.NotFound(w, r)
+		return
+	}
+	// Rewrite to "/" rather than "/index.html": http.FileServer redirects any
+	// path ending in "/index.html" to "./", which would lose the deep link.
+	r2 := r.Clone(r.Context())
+	r2.URL.Path = "/"
+	r2.URL.RawPath = ""
+	t.index.ServeHTTP(w, r2)
 }
 
 type gzipHeaderHandler struct {

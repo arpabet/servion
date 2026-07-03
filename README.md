@@ -36,7 +36,7 @@ Most Go microservice setups look like this: Cobra for CLI, Wire or Fx for DI, Gi
 - **gRPC support** — optional `servion/grpc` submodule (keeps gRPC's heavy deps out of the core) with server/client factories, interceptor chaining, auth, health and reflection
 - **value-rpc support** — optional `servion/vrpc` submodule for schemaless [value-rpc](https://go.arpabet.com/value-rpc) (unary, server/client streams, chat) over TCP, Unix sockets or WebSocket
 - **TLS/SSL** — optional TLS with configurable certificates
-- **Static asset serving** — with automatic gzip variant negotiation
+- **Static asset serving** — with automatic gzip variant negotiation and optional SPA history-mode fallback (`spa` option)
 - **Structured logging** — zap logger factory with DI integration
 - **Property-based configuration** — from files, embedded resources, or in-memory maps
 - **Health check endpoint** — built-in `/healthz` for Kubernetes liveness/readiness probes
@@ -434,7 +434,15 @@ Configure server capabilities via the `options` property (semicolon-delimited):
 |--------|-------------|
 | `handlers` | Enable HTTP handler registration |
 | `assets` | Enable static asset serving |
+| `spa` | Serve the embedded `index.html` for unmatched paths (history-mode SPA fallback; use together with `assets`) |
 | `tls` | Enable TLS/SSL |
+
+With `spa` enabled, deep links like `/crm/customers` return the embedded
+`index.html` (with gzip variant negotiation) instead of 404, so single-page
+apps can use history-mode routing instead of hash routing. The fallback only
+applies to GET/HEAD requests without a file extension; paths under
+`{server}.spa-exclude` prefixes (default `/api`) still return 404 so JSON
+clients never receive HTML.
 
 ## gRPC
 
@@ -626,7 +634,8 @@ optional `ResiliencePolicy` bean — build it from properties with
 | `{server}.read-timeout` | `30s` | HTTP read timeout |
 | `{server}.write-timeout` | `30s` | HTTP write timeout |
 | `{server}.idle-timeout` | `60s` | HTTP idle timeout |
-| `{server}.options` | — | Server features: `handlers`, `assets`, `tls` |
+| `{server}.options` | — | Server features: `handlers`, `assets`, `spa`, `tls` |
+| `{server}.spa-exclude` | `/api` | URL prefixes exempt from the `spa` fallback (semicolon-delimited) |
 | `gzip.level` | `1` | Compression level (1-9) |
 | `gzip.threshold` | `1024` | Min response bytes to compress |
 | `gzip.skip` | `/images;/videos;/ws` | URL prefixes to skip |

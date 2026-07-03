@@ -87,3 +87,20 @@ export default createRouter({
   routes: [{ path: '/', component: App }],
 });
 ```
+
+## History-mode routing (clean URLs)
+
+Alternatively, enable the `spa` server option and use `createWebHistory()`
+instead of hash routing — unmatched paths (deep links like `/customers/42`)
+then serve the embedded `index.html` instead of 404:
+
+```go
+properties := glue.MapPropertySource{
+    "http-server.bind-address": "0.0.0.0:8000",
+    "http-server.options":      "assets;spa",
+    // "http-server.spa-exclude": "/api",  // prefixes that keep returning 404 (default)
+}
+```
+
+The fallback applies only to GET/HEAD requests without a file extension, so
+missing assets (`/app.js`) and API prefixes still return real 404s.
