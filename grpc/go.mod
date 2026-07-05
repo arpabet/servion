@@ -3,9 +3,9 @@ module go.arpabet.com/servion/grpc
 go 1.25.8
 
 require (
-	go.arpabet.com/cligo v0.5.0
+	go.arpabet.com/cligo v0.5.1
 	go.arpabet.com/glue v1.5.1
-	go.arpabet.com/servion v1.5.3
+	go.arpabet.com/servion v1.5.4
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da
