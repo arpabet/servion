@@ -39,8 +39,6 @@ This command accepts one argument that is profile, that helps to define how the 
 
 func (t *implRunCommand) Run(ctx context.Context) (err error) {
 
-runItAgain:
-
 	beans := make([]interface{}, len(t.beans))
 	copy(beans, t.beans)
 
@@ -72,13 +70,16 @@ runItAgain:
 		logger.Info("RunServersDone", zap.Bool("restarting", runtime.Restarting()))
 	}
 
-	err = child.Close()
-	if err != nil {
-		logger.Error("ChildContextClose", zap.Error(err))
+	if e := child.Close(); e != nil {
+		logger.Error("ChildContextClose", zap.Error(e))
 	}
 
 	if runtime.Restarting() {
-		goto runItAgain
+		// Delegate the restart to cligo: it rebuilds a fresh container with the
+		// config re-read and profiles re-resolved (e.g. onboarding → prod),
+		// without exiting the OS process — so a Kubernetes pod is not restarted
+		// and a stateful store's lock is released with the closed child context.
+		return cligo.ErrRepeatRun
 	}
 
 	return nil
