@@ -20,6 +20,11 @@ import (
 type implHttpServer struct {
 	Log *zap.Logger `inject:""`
 
+	// Provider, when present in this server's context, supplies the listener
+	// instead of net.Listen (e.g. a reverse tunnel). Injected per server context,
+	// so it applies only to the servers whose context contains it.
+	Provider ListenerProvider `inject:"optional"`
+
 	srv      *http.Server
 	listener net.Listener
 
@@ -38,6 +43,19 @@ func (t *implHttpServer) PostConstruct() error {
 }
 
 func (t *implHttpServer) Bind() (err error) {
+
+	// A ListenerProvider in this server's context may supply the listener (e.g. a
+	// reverse tunnel); a nil listener means it declined, so bind normally.
+	if t.Provider != nil {
+		ln, e := t.Provider.ProvideListener("tcp", t.srv.Addr)
+		if e != nil {
+			return xerrors.Errorf("listener provider for '%s': %w", t.srv.Addr, e)
+		}
+		if ln != nil {
+			t.listener = ln
+			return nil
+		}
+	}
 
 	t.listener, err = net.Listen("tcp", t.srv.Addr)
 	if err != nil {

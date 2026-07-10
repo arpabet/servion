@@ -160,6 +160,26 @@ type HttpMiddleware interface {
 	Match(prefix string) bool
 }
 
+var ListenerProviderClass = reflect.TypeOf((*ListenerProvider)(nil)).Elem()
+
+/*
+ListenerProvider optionally supplies the net.Listener an HTTP (or other) server
+serves on, instead of the default net.Listen(network, address). When a bean
+implementing it is present in a server's context it is injected and consulted at
+Bind time: returning a non-nil listener overrides the bind; returning (nil, nil)
+declines, so the server falls back to net.Listen. This is the seam for serving on
+something other than a freshly bound local socket — a reverse tunnel, a shared or
+pre-opened listener, or an activation socket — without the server knowing how the
+listener was obtained. Because it is injected per server context, it applies only
+to the servers whose context contains it.
+*/
+type ListenerProvider interface {
+
+	// ProvideListener returns the listener to serve on, or (nil, nil) to let the
+	// server bind network/address itself.
+	ProvideListener(network, address string) (net.Listener, error)
+}
+
 type AuthInfo struct {
 	// HashedToken hash of bearer token (optional, but often useful for tracing)
 	HashedToken string
