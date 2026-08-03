@@ -7,6 +7,9 @@ package servion
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -144,6 +147,64 @@ func doWithServers(core glue.Container, cb func([]Server) error) (err error) {
 	return cb(serverList)
 }
 
+/*
+bindServers binds every server, reporting failures to THREE audiences that never
+overlap:
+
+  - the zap log, for whoever tails it later;
+  - stderr, for the person at the terminal RIGHT NOW — in production the zap
+    log is usually a rotated file, and a bind failure that goes only there is
+    invisible at the exact moment someone is watching;
+  - the returned error, when NOTHING bound — an application with zero
+    listeners is not degraded, it is not running, and before this it exited 0
+    with no output: the errgroup waited on an empty set, Wait returned nil,
+    and the process ended looking exactly like a successful daemonization.
+
+A PARTIAL failure still serves, deliberately: an application whose admin
+surface is up can be used to FIX the port that failed, and killing everything
+over one conflict would take that remedy away.
+*/
+func bindServers(servers []Server, log *zap.Logger, stderr io.Writer) ([]Server, error) {
+	var bound []Server
+	var bindErrs []error
+	for _, server := range servers {
+		if err := server.Bind(); err != nil {
+			log.Error("Bind", zap.Error(err))
+			fmt.Fprintf(stderr, "warning: %v\n", err)
+			bindErrs = append(bindErrs, err)
+		} else {
+			bound = append(bound, server)
+		}
+	}
+	if len(bound) == 0 {
+		// The hint comes BEFORE the %w: xerrors renders the wrapped chain at
+		// the end, so a suffix after the verb would make the same bind failure
+		// print twice — once inside the join, once as the chain.
+		return nil, xerrors.Errorf("no server could bind (%d of %d failed)%s: %w",
+			len(bindErrs), len(servers), addrInUseHint(bindErrs), errors.Join(bindErrs...))
+	}
+	if len(bindErrs) > 0 {
+		fmt.Fprintf(stderr, "warning: %d of %d servers failed to bind — continuing with the rest so the failure can be fixed from the admin surface\n",
+			len(bindErrs), len(servers))
+	}
+	return bound, nil
+}
+
+/*
+addrInUseHint names the LIKELY cause when a bind failed with EADDRINUSE: another
+instance of the same application. It is the single most common way to reach
+"nothing bound" — a second `run` in another terminal — and the raw errno tells
+an operator what happened without telling them what it means.
+*/
+func addrInUseHint(errs []error) string {
+	for _, err := range errs {
+		if errors.Is(err, syscall.EADDRINUSE) {
+			return " — is another instance already running?"
+		}
+	}
+	return ""
+}
+
 func runServers(runtime Runtime, core glue.Container, log *zap.Logger) error {
 
 	return doWithServers(core, func(servers []Server) (err error) {
@@ -158,13 +219,9 @@ func runServers(runtime Runtime, core glue.Container, log *zap.Logger) error {
 		c, cancel := context.WithCancel(runtime)
 		defer cancel()
 
-		var boundServers []Server
-		for _, server := range servers {
-			if err := server.Bind(); err != nil {
-				log.Error("Bind", zap.Error(err))
-			} else {
-				boundServers = append(boundServers, server)
-			}
+		boundServers, err := bindServers(servers, log, os.Stderr)
+		if err != nil {
+			return err
 		}
 
 		cnt := 0

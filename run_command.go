@@ -82,5 +82,17 @@ func (t *implRunCommand) Run(ctx context.Context) (err error) {
 		return cligo.ErrRepeatRun
 	}
 
-	return nil
+	/*
+		The run's error IS the command's error. It used to be logged above and
+		then discarded, which made the two failures a person most needs to see
+		exit 0 with nothing on the terminal: a server whose every bind failed (a
+		second instance of the application — banner, prompt, gone), and a server
+		whose Serve crashed. The log line stays for whoever tails the file; the
+		return is for cligo, which prints it to stderr and sets the exit code —
+		error handling lives in the framework, not in application os.Exit calls.
+
+		A clean shutdown still returns nil: Serve's closed-socket errors are
+		filtered by the server implementations, so g.Wait is nil on SIGTERM.
+	*/
+	return err
 }
