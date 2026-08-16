@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	go.arpabet.com/cligo v0.6.0
 	go.arpabet.com/glue v1.6.0
-	go.arpabet.com/servion v1.5.6
+	go.arpabet.com/servion v1.5.7
 )
 
 // This example is its OWN module so its webapp/bindata assets and tooling never

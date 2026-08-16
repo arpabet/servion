@@ -6,8 +6,8 @@ require (
 	go.arpabet.com/glue v1.6.0
 	go.arpabet.com/obfs/reality v0.3.0
 	go.arpabet.com/obfs/tlscamo v0.3.0
-	go.arpabet.com/servion v1.5.6
-	go.arpabet.com/servion/vrpc v1.5.6
+	go.arpabet.com/servion v1.5.7
+	go.arpabet.com/servion/vrpc v1.5.7
 	go.arpabet.com/value v1.4.0
 	go.arpabet.com/value-rpc v1.6.0
 )
