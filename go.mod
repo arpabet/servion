@@ -3,6 +3,7 @@ module go.arpabet.com/servion
 go 1.25.0
 
 // replace go.arpabet.com/cligo => ../cligo
+toolchain go1.25.13
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
