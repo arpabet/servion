@@ -6,7 +6,7 @@ require (
 	go.arpabet.com/cligo v0.6.0
 	go.arpabet.com/glue v1.6.0
 	go.arpabet.com/obfs v0.3.0
-	go.arpabet.com/servion v1.5.6
+	go.arpabet.com/servion v1.5.7
 	go.arpabet.com/value v1.4.0
 	go.arpabet.com/value-rpc v1.6.0
 	go.arpabet.com/value-rpc/resilience v1.6.0
