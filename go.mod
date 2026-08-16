@@ -10,8 +10,8 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/prometheus/client_golang v1.23.2
 	github.com/spf13/pflag v1.0.10
-	go.arpabet.com/cligo v0.5.1
-	go.arpabet.com/glue v1.5.1
+	go.arpabet.com/cligo v0.6.0
+	go.arpabet.com/glue v1.6.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/sync v0.21.0
