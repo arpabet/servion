@@ -28,7 +28,10 @@ type implRateLimiterMiddleware struct {
 	// Sliding window interval
 	Interval time.Duration `value:"ratelimit.interval,default=1s"`
 
-	ClientIDHeader string `value:"ratelimit.header,default=X-Forwarded-For"`
+	// Header holding the client address. Cloudflare sets CF-Connecting-IP
+	// itself; don't use X-Forwarded-For behind Cloudflare, because proxies
+	// append to it and its first entry is whatever the client sent.
+	ClientIDHeader string `value:"ratelimit.header,default=CF-Connecting-IP"`
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -81,7 +84,7 @@ func (t *implRateLimiterMiddleware) Middleware(next http.Handler) http.Handler {
 			// you should make sure that proxy setup correct header
 			// never use remoteAddr, since this rate limiter is designed for app behind proxy, no need to limit proxy itself
 			t.Log.Warn("RateLimiterMissingXFF",
-				zap.String("X-Forwarded-For", t.ClientIDHeader),
+				zap.String("header", t.ClientIDHeader),
 				zap.String("remoteAddr", r.RemoteAddr),
 				zap.String("method", r.Method),
 				zap.String("path", r.URL.Path),

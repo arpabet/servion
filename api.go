@@ -160,6 +160,26 @@ type HttpMiddleware interface {
 	Match(prefix string) bool
 }
 
+var HttpRouterMiddlewareClass = reflect.TypeOf((*HttpRouterMiddleware)(nil)).Elem()
+
+/*
+HttpRouterMiddleware wraps a server's whole router instead of individual
+handlers. HttpMiddleware only wraps the registered handlers whose pattern it
+matches, so it never sees embedded assets or the not-found / SPA fallback,
+which answer every path nothing is registered on. A router middleware sees
+every request the server answers. Router middlewares run in bean order, before
+any HttpMiddleware.
+*/
+type HttpRouterMiddleware interface {
+	glue.OrderedBean
+
+	/**
+	RouterMiddleware Returns the router wrapped by this middleware.
+	*/
+
+	RouterMiddleware(router http.Handler) http.Handler
+}
+
 var ListenerProviderClass = reflect.TypeOf((*ListenerProvider)(nil)).Elem()
 
 /*

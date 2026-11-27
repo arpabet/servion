@@ -22,12 +22,13 @@ import (
 )
 
 type implHttpServerFactory struct {
-	Log         *zap.Logger            `inject:""`
-	Properties  glue.Properties        `inject:""`
-	Handlers    []HttpHandler          `inject:"optional,level=1"`
-	Middlewares []HttpMiddleware       `inject:"optional,level=1"`
-	Resources   []*glue.ResourceSource `inject:"optional"`
-	TlsConfig   *tls.Config            `inject:"optional"`
+	Log               *zap.Logger            `inject:""`
+	Properties        glue.Properties        `inject:""`
+	Handlers          []HttpHandler          `inject:"optional,level=1"`
+	Middlewares       []HttpMiddleware       `inject:"optional,level=1"`
+	RouterMiddlewares []HttpRouterMiddleware `inject:"optional,level=1"`
+	Resources         []*glue.ResourceSource `inject:"optional"`
+	TlsConfig         *tls.Config            `inject:"optional"`
 
 	beanName string
 }
@@ -40,6 +41,11 @@ func (t *implHttpServerFactory) PostConstruct() error {
 	if len(t.Middlewares) > 1 {
 		sort.Slice(t.Middlewares, func(i, j int) bool {
 			return t.Middlewares[i].BeanOrder() < t.Middlewares[j].BeanOrder()
+		})
+	}
+	if len(t.RouterMiddlewares) > 1 {
+		sort.Slice(t.RouterMiddlewares, func(i, j int) bool {
+			return t.RouterMiddlewares[i].BeanOrder() < t.RouterMiddlewares[j].BeanOrder()
 		})
 	}
 	return nil
@@ -129,6 +135,16 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 		}
 	}
 
+	// Router middlewares wrap the whole router, so they also see the requests
+	// answered by assets and the not-found / SPA fallback. Wrap in reverse so
+	// the first in bean order runs first.
+	var rootHandler http.Handler = serveMux
+	for i := len(t.RouterMiddlewares) - 1; i >= 0; i-- {
+		if rm := t.RouterMiddlewares[i]; rm != nil {
+			rootHandler = rm.RouterMiddleware(rootHandler)
+		}
+	}
+
 	readTimeout := t.Properties.GetDuration(fmt.Sprintf("%s.%s", t.beanName, "read-timeout"), 30*time.Second)
 	writeTimeout := t.Properties.GetDuration(fmt.Sprintf("%s.%s", t.beanName, "write-timeout"), 30*time.Second)
 	idleTimeout := t.Properties.GetDuration(fmt.Sprintf("%s.%s", t.beanName, "idle-timeout"), time.Minute)
@@ -138,12 +154,13 @@ func (t *implHttpServerFactory) Object() (object interface{}, err error) {
 		zap.String("bean", t.beanName),
 		zap.Strings("handlers", handlerList),
 		zap.Strings("assets", assetList),
+		zap.Int("routerMiddlewares", len(t.RouterMiddlewares)),
 		zap.Any("options", options),
 		zap.Bool("tls", tlsConfig != nil))
 
 	srv := &http.Server{
 		Addr:         listenAddr,
-		Handler:      serveMux,
+		Handler:      rootHandler,
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		IdleTimeout:  idleTimeout,

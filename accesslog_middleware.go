@@ -67,20 +67,3 @@ func (t *implAccessLogMiddleware) Match(prefix string) bool {
 	}
 	return false
 }
-
-type statusWriter struct {
-	http.ResponseWriter
-	status  int
-	written int
-}
-
-func (w *statusWriter) WriteHeader(code int) {
-	w.status = code
-	w.ResponseWriter.WriteHeader(code)
-}
-
-func (w *statusWriter) Write(b []byte) (int, error) {
-	n, err := w.ResponseWriter.Write(b)
-	w.written += n
-	return n, err
-}

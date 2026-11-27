@@ -825,3 +825,71 @@ func TestHttpServerFactory_SpaFallback_GzipVariant(t *testing.T) {
 		t.Errorf("expected gzipped index content, got %q", string(content))
 	}
 }
+
+type testRouterMiddleware struct {
+	order int
+	trace *[]int
+}
+
+func (m *testRouterMiddleware) BeanOrder() int { return m.order }
+func (m *testRouterMiddleware) RouterMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*m.trace = append(*m.trace, m.order)
+		w.Header().Set("X-Router-Middleware", "applied")
+		next.ServeHTTP(w, r)
+	})
+}
+
+func TestHttpServerFactory_RouterMiddlewareSeesEveryRequest(t *testing.T) {
+	f := newSpaTestFactory(t, "assets;spa")
+	var trace []int
+	f.RouterMiddlewares = []HttpRouterMiddleware{&testRouterMiddleware{order: 1, trace: &trace}}
+
+	for target, wantCode := range map[string]int{
+		"/app.js":        http.StatusOK,       // embedded asset
+		"/crm/customers": http.StatusOK,       // SPA deep link
+		"/wp-login.php":  http.StatusNotFound, // SPA fallback 404
+	} {
+		rec := serveSpaRequest(t, f, http.MethodGet, target, nil)
+		if rec.Code != wantCode {
+			t.Errorf("%s: status = %d, want %d", target, rec.Code, wantCode)
+		}
+		if rec.Header().Get("X-Router-Middleware") != "applied" {
+			t.Errorf("%s: router middleware not applied", target)
+		}
+	}
+}
+
+func TestHttpServerFactory_RouterMiddlewaresRunInBeanOrder(t *testing.T) {
+	f := newSpaTestFactory(t, "assets;spa")
+	var trace []int
+	f.RouterMiddlewares = []HttpRouterMiddleware{
+		&testRouterMiddleware{order: 10, trace: &trace},
+		&testRouterMiddleware{order: 1, trace: &trace},
+	}
+	f.PostConstruct()
+
+	serveSpaRequest(t, f, http.MethodGet, "/app.js", nil)
+
+	if len(trace) != 2 || trace[0] != 1 || trace[1] != 10 {
+		t.Errorf("run order = %v, want [1 10]", trace)
+	}
+}
+
+func TestHttpServerFactory_Fail2BanCountsSpaFallback404s(t *testing.T) {
+	f := newSpaTestFactory(t, "assets;spa")
+	f.RouterMiddlewares = []HttpRouterMiddleware{newTestFail2Ban(newFakeClock())}
+
+	scanner := http.Header{"Cf-Connecting-Ip": {"203.0.113.7"}}
+	for i := 0; i < 5; i++ {
+		serveSpaRequest(t, f, http.MethodGet, "/wp-login.php", scanner)
+	}
+
+	if rec := serveSpaRequest(t, f, http.MethodGet, "/app.js", scanner); rec.Code != http.StatusNotFound {
+		t.Errorf("banned scanner: status = %d, want 404", rec.Code)
+	}
+	visitor := http.Header{"Cf-Connecting-Ip": {"198.51.100.1"}}
+	if rec := serveSpaRequest(t, f, http.MethodGet, "/app.js", visitor); rec.Code != http.StatusOK {
+		t.Errorf("visitor: status = %d, want 200", rec.Code)
+	}
+}

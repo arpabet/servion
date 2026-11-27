@@ -6,8 +6,28 @@ import (
 	"testing"
 	"time"
 
+	"go.arpabet.com/glue"
 	"go.uber.org/zap"
 )
+
+// TestRateLimiter_DefaultHeaderIsCFConnectingIP: Cloudflare appends to
+// X-Forwarded-For, so its first entry is client-controlled; the default must
+// be the header Cloudflare sets itself.
+func TestRateLimiter_DefaultHeaderIsCFConnectingIP(t *testing.T) {
+	ctx, err := glue.New(zap.NewNop(), newMockRuntime(true), RateLimiterMiddleware(1))
+	if err != nil {
+		t.Fatalf("glue.New: %v", err)
+	}
+	defer ctx.Close()
+
+	beans := ctx.Bean(HttpMiddlewareClass, glue.DefaultSearchLevel)
+	if len(beans) != 1 {
+		t.Fatalf("found %d middlewares, want 1", len(beans))
+	}
+	if got := beans[0].Object().(*implRateLimiterMiddleware).ClientIDHeader; got != "CF-Connecting-IP" {
+		t.Errorf("default ratelimit.header = %q, want CF-Connecting-IP", got)
+	}
+}
 
 func newTestRateLimiter(limit int, interval time.Duration) *implRateLimiterMiddleware {
 	return &implRateLimiterMiddleware{

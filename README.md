@@ -19,7 +19,7 @@ Most Go microservice setups look like this: Cobra for CLI, Wire or Fx for DI, Gi
 | CLI | Built-in | Separate (Cobra) | goctl (codegen) | No |
 | Dependency Injection | Built-in (glue) | Built-in (Dig) | No | Manual/Wire |
 | HTTP Server | Built-in | Via lifecycle hooks | Built-in | Built-in |
-| Built-in Middleware | Gzip, RateLimit, Auth, CORS, Metrics, AccessLog, RequestID | None | Built-in | Excellent |
+| Built-in Middleware | Gzip, RateLimit, Fail2Ban, Auth, CORS, Metrics, AccessLog, RequestID | None | Built-in | Excellent |
 | Multiple Servers | Yes, isolated contexts | Manual | No | No |
 | Graceful Restart | SIGHUP | No | No | No |
 | Lines to Hello World | ~15 | ~40 | ~30 | ~50 |
@@ -28,7 +28,7 @@ Most Go microservice setups look like this: Cobra for CLI, Wire or Fx for DI, Gi
 
 - **Container-based architecture** — every component is a DI bean with automatic lifecycle management
 - **Multiple concurrent servers** — run HTTP, API, and admin servers in one process with isolated child contexts
-- **Built-in middleware** — adaptive gzip compression, sliding-window rate limiting, bearer token authentication, CORS, request ID, access logging, Prometheus metrics
+- **Built-in middleware** — adaptive gzip compression, sliding-window rate limiting, fail2ban-style banning of 404 scanners, bearer token authentication, CORS, request ID, access logging, Prometheus metrics
 - **Prometheus metrics** — built-in `/metrics` endpoint and per-handler instrumentation
 - **CLI interface** — `--home`, `--bind` flags and extensible command structure via [cligo](https://go.arpabet.com/cligo)
 - **Graceful shutdown & restart** — SIGINT/SIGTERM for shutdown, SIGHUP for zero-downtime restart
@@ -129,8 +129,45 @@ gzip.skip=/images;/videos;/ws
 ratelimit.prefixes=/api
 ratelimit.limit=10
 ratelimit.interval=1s
-ratelimit.header=X-Forwarded-For
+ratelimit.header=CF-Connecting-IP
 ```
+
+The client is identified by `ratelimit.header`, which defaults to
+`CF-Connecting-IP`, the header Cloudflare sets itself. Don't use
+`X-Forwarded-For` behind Cloudflare: Cloudflare and most proxies append to it,
+so its first entry is whatever the client sent.
+
+**Fail2Ban** — bans a client that collects too many 404 responses, the way
+scanners probing for `/.env` or `/wp-login.php` do. A banned client gets a
+plain 404 for every request until the ban ends:
+```go
+servion.RunCommand(
+    servion.HttpServerScanner("http-server"),
+    servion.Fail2BanMiddleware(1),
+)
+```
+```properties
+fail2ban.header=CF-Connecting-IP
+fail2ban.maxretry=5
+fail2ban.findtime=1m
+fail2ban.bantime=1h
+fail2ban.ignore-paths=/favicon.ico;/apple-touch-icon;/robots.txt;/sitemap.xml;/.well-known/;/assets/
+```
+
+Fail2Ban is an `HttpRouterMiddleware`. Unlike `HttpMiddleware`, which only wraps
+registered handlers, a router middleware wraps the server's whole router. That
+way it also sees the 404s from assets and from the not-found / SPA fallback,
+which is where scanner probes end up.
+
+- **Client address:** taken from `fail2ban.header`. Trust that header only if
+  your origin accepts connections from Cloudflare alone; otherwise anyone can
+  set it.
+- **Untracked requests:** requests without the header, such as local probes,
+  are never tracked.
+- **IPv6:** clients are tracked by their /64.
+- **Ignored 404s:** those under `fail2ban.ignore-paths` don't count. Browsers
+  request those paths on their own, and tabs left open across a deploy ask for
+  hashed bundles that no longer exist.
 
 **Authentication** — bearer token auth with context propagation:
 ```properties
@@ -642,7 +679,12 @@ optional `ResiliencePolicy` bean — build it from properties with
 | `ratelimit.prefixes` | `/api` | URL prefixes to rate limit |
 | `ratelimit.limit` | `10` | Max requests per interval |
 | `ratelimit.interval` | `1s` | Rate limit time window |
-| `ratelimit.header` | `X-Forwarded-For` | Client identity header |
+| `ratelimit.header` | `CF-Connecting-IP` | Client identity header |
+| `fail2ban.header` | `CF-Connecting-IP` | Header holding the client address |
+| `fail2ban.maxretry` | `5` | 404 responses within `findtime` that ban a client |
+| `fail2ban.findtime` | `1m` | Window in which 404 responses are counted |
+| `fail2ban.bantime` | `1h` | How long a banned client gets 404 for every request |
+| `fail2ban.ignore-paths` | `/favicon.ico;/apple-touch-icon;/robots.txt;/sitemap.xml;/.well-known/;/assets/` | URL prefixes whose 404s never count |
 | `auth.prefixes` | `/api` | URL prefixes requiring auth |
 | `auth.tokens` | — | Comma-separated allowed tokens |
 | `jwt.secret` | — | HMAC shared secret (mutually exclusive with `jwt.public-key`) |
